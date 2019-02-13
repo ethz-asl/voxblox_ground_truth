@@ -14,4 +14,6 @@ catkin_simple(ALL_DEPS_REQUIRED)
 ##############
 ## BINARIES ##
 ##############
-
+cs_add_executable(ply_to_sdf
+    src/main.cpp
+    src/io/tinyply.cpp)
