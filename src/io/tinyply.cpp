@@ -748,6 +748,14 @@ void PlyFile::PlyFileImpl::parse_data(std::istream &is, bool firstPass) {
       } else {
         read_list_binary(p.listType, &listSize, dummyCount,
                          _is);  // the list size
+        // BOF Enforced sized hint modification
+        if (f.helper->list_size_hint != 0 &&
+            listSize != f.helper->list_size_hint) {
+          std::cout << "Encountered list of length " << listSize
+                    << " for property whose size hint was  "
+                    << f.helper->list_size_hint << std::endl;
+          exit(-2);
+        }
         read_property_binary(p.propertyType, f.prop_stride * listSize,
                              dest + destOffset, destOffset,
                              _is);  // properties in list
@@ -774,6 +782,14 @@ void PlyFile::PlyFileImpl::parse_data(std::istream &is, bool firstPass) {
       } else {
         read_property_ascii(p.listType, f.list_stride, &listSize, dummyCount,
                             _is);  // the list size
+        // BOF Enforced sized hint modification
+        if (f.helper->list_size_hint != 0 &&
+            listSize != f.helper->list_size_hint) {
+          std::cout << "Encountered list of length " << listSize
+                    << " for property whose size hint was  "
+                    << f.helper->list_size_hint << std::endl;
+          exit(-2);
+        }
         for (size_t i = 0; i < listSize; ++i) {
           read_property_ascii(p.propertyType, f.prop_stride, dest + destOffset,
                               destOffset, _is);
