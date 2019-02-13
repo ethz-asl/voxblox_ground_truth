@@ -45,6 +45,10 @@ int main(int argc, char* argv[]) {
       ply_file.request_properties_from_element("vertex", {"x", "y", "z"});
   ply_faces =
       ply_file.request_properties_from_element("face", {"vertex_indices"}, 3);
+  // NOTE: At the moment only triangular meshes are supported by
+  //       voxblox_ground_truth. The tinyply parser has therefore been modified
+  //       to assert that all lists exactly fit their size hint. In this case
+  //       this enforces that all faces have 3 vertices (i.e. are triangular).
 
   // Parse the file's data
   ply_file.read(ply_ss);
