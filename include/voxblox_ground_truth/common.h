@@ -6,6 +6,12 @@
 #define VOXBLOX_GROUND_TRUTH_COMMON_H_
 
 typedef Eigen::Vector3f Point;
+typedef Eigen::Vector2f Point2D;
+
+// Voxel used to track the intersection counts, used to derive the SDF sign
+struct IntersectionVoxel {
+  unsigned int count = 0;
+};
 
 struct TriangularFace {
   // IDs of the vertices for all three triangle corners
@@ -24,5 +30,16 @@ struct AABB {
     return aabb;
   }
 };
+
+inline bool visualizeIntersectionCount(
+    const IntersectionVoxel& voxel, const Point& /*coord*/, double* intensity) {
+  CHECK_NOTNULL(intensity);
+  constexpr float kMinWeight = 1e-3;
+  if (voxel.count > 0) {
+    *intensity = voxel.count;
+    return true;
+  }
+  return false;
+}
 
 #endif  // VOXBLOX_GROUND_TRUTH_COMMON_H_
