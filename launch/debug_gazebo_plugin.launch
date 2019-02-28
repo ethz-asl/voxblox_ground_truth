@@ -1,0 +1,21 @@
+<launch>
+  <arg name="show_gazebo" default="true"/>
+
+  <!-- Launch Gazebo world -->
+  <group>
+    <!-- Add rotors_gazebo models and resources to gazebo path -->
+    <env name="GAZEBO_MODEL_PATH" value="${GAZEBO_MODEL_PATH}:$(find rotors_gazebo)/models"/>
+    <env name="GAZEBO_RESOURCE_PATH" value="${GAZEBO_RESOURCE_PATH}:$(find rotors_gazebo)/models"/>
+
+    <!-- Add firefighting_arena models and resources to gazebo path -->
+    <env name="GAZEBO_MODEL_PATH" value="${GAZEBO_MODEL_PATH}:$(find firefighting_arena)/models"/>
+    <env name="GAZEBO_RESOURCE_PATH" value="${GAZEBO_RESOURCE_PATH}:$(find firefighting_arena)/models"/>
+
+    <include file="$(find gazebo_ros)/launch/empty_world.launch">
+      <arg name="world_name" value="$(find firefighting_arena)/worlds/burning_building.world"/>
+      <!--<arg name="debug" value="true"/> -->
+      <!--<arg name="paused" value="true"/>-->
+      <arg name="gui" value="$(arg show_gazebo)"/>
+    </include>
+  </group>
+</launch>
