@@ -1,4 +1,0 @@
-<launch>
-  <node pkg="rviz" type="rviz" name="$(anon rviz)" respawn="false" output="screen"/>
-  <node name="ply_to_sdf" pkg="voxblox_ground_truth" type="ply_to_sdf" output="screen" args="/home/victor/Downloads/bunny/reconstruction/bun_zipper.ply 0.02" />
-</launch>

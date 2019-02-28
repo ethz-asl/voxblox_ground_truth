@@ -116,14 +116,18 @@ int main(int argc, char* argv[]) {
   for (const TriangularFace &triangle : triangles) {
     // Indicate progress
     triangle_i++;
-    printf("\rProgress: %3.2f%% - total nr of blocks %lu",
-           triangle_i / static_cast<double>(triangles.size()) * 100,
-           tsdf_map.getTsdfLayer().getNumberOfAllocatedBlocks());
+    // Only print progress for each promile of completion, to reduce IO wait
+    if (triangle_i % (triangles.size() / 1000) == 0) {
+      printf("\rProgress: %3.1f%% - total nr of blocks %lu",
+             triangle_i / static_cast<double>(triangles.size()) * 100,
+             tsdf_map.getTsdfLayer().getNumberOfAllocatedBlocks());
+      std::cout << std::flush;
+    }
 
     // Exit if CTRL+C was pressed
     if (!ros::ok()) {
       std::cout << "\nShutting down..." << std::endl;
-      break;
+      return -1;
     }
 
     // Get the triangle vertices
@@ -138,9 +142,9 @@ int main(int argc, char* argv[]) {
     AABB aabb_tight = AABB::fromPoints(vertex_a, vertex_b, vertex_c);
     // Express the AABB corners in voxel index units
     GlobalIndex aabb_min_index =
-        (aabb_tight.min.array() * voxel_size_inv).floor().cast<IndexElement>();
+        (aabb_tight.min.array() * voxel_size_inv).floor().cast<LongIndexElement>();
     GlobalIndex aabb_max_index =
-        (aabb_tight.max.array() * voxel_size_inv).ceil().cast<IndexElement>();
+        (aabb_tight.max.array() * voxel_size_inv).ceil().cast<LongIndexElement>();
     // Add padding
     const GlobalIndex voxel_index_min = aabb_min_index.array() - 1;
     const GlobalIndex voxel_index_max = aabb_max_index.array() + 1;
@@ -251,6 +255,12 @@ int main(int argc, char* argv[]) {
     for (y = global_voxel_index_min[1]; y < global_voxel_index_max[1]; y++) {
       size_t intersection_count = 0;
       for (x = global_voxel_index_min[0]; x < global_voxel_index_max[0]; x++) {
+        // Exit if CTRL+C was pressed
+        if (!ros::ok()) {
+          std::cout << "\nShutting down..." << std::endl;
+          return -1;
+        }
+
         GlobalIndex global_voxel_index(x, y, z);
 
         IntersectionVoxel* intersection_voxel =
@@ -258,6 +268,15 @@ int main(int argc, char* argv[]) {
 
         if (intersection_voxel) {
           intersection_count += intersection_voxel->count;
+        }
+
+        if (intersection_count%2 == 1) {
+          // We're inside the surface
+          voxblox::TsdfVoxel* tsdf_voxel =
+              tsdf_map.getTsdfLayerPtr()->getVoxelPtrByGlobalIndex(global_voxel_index);
+          if (tsdf_voxel) {
+            tsdf_voxel->distance = -tsdf_voxel->distance;
+          }
         }
       }
     }
@@ -283,6 +302,8 @@ int main(int argc, char* argv[]) {
   tsdf_slice_pub.publish(tsdf_slice_ptcloud_msg);
   intersection_count_pub.publish(intersection_count_msg);
 
+  std::cout << "Done" << std::endl;
   ros::spin();
+
   return 0;
 }
