@@ -13,9 +13,8 @@
 
     <include file="$(find gazebo_ros)/launch/empty_world.launch">
       <arg name="world_name" value="$(find firefighting_arena)/worlds/burning_building.world"/>
-      <!--<arg name="debug" value="true"/> -->
+      <!--<arg name="debug" value="true"/>-->
       <!--<arg name="paused" value="true"/>-->
-      <arg name="gui" value="$(arg show_gazebo)"/>
     </include>
   </group>
 </launch>

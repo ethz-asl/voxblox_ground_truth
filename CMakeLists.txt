@@ -23,6 +23,7 @@ cs_add_executable(ply_to_sdf
 # GAZEBO PLUGIN #
 #################
 # TODO(victorr): Check if this is the nice way to do it
+
 find_package(gazebo REQUIRED)
 include_directories(${GAZEBO_INCLUDE_DIRS})
 link_directories(${GAZEBO_LIBRARY_DIRS})
