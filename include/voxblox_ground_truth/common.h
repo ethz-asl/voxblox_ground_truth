@@ -5,6 +5,9 @@
 #ifndef VOXBLOX_GROUND_TRUTH_COMMON_H_
 #define VOXBLOX_GROUND_TRUTH_COMMON_H_
 
+#include <glog/logging.h>
+#include <Eigen/StdVector>
+
 typedef Eigen::Vector3f Point;
 typedef Eigen::Vector2f Point2D;
 
