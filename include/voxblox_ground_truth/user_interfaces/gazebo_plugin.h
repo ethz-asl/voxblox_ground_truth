@@ -17,7 +17,7 @@
 namespace gazebo {
 class VoxbloxGroundTruthPlugin : public WorldPlugin {
  public:
-  VoxbloxGroundTruthPlugin() : WorldPlugin(), node_handle_("~") {}
+  VoxbloxGroundTruthPlugin() : WorldPlugin(), nh_private_("~") {}
 
   void Load(physics::WorldPtr world, sdf::ElementPtr _sdf) override;
 
@@ -26,11 +26,17 @@ class VoxbloxGroundTruthPlugin : public WorldPlugin {
 
  private:
   physics::WorldPtr world_;
-  ros::NodeHandle node_handle_;
+  ros::NodeHandle nh_private_;
   ros::ServiceServer srv_;
 
   std::vector<std::string> mesh_types_names_ = {
       "POINTS", "LINES", "LINESTRIPS", "TRIANGLES", "TRIFANS", "TRISTRIPS"};
+
+  // Rviz publishers for debugging
+  ros::Publisher tsdf_map_pub_;
+  ros::Publisher tsdf_map_surface_pub_;
+  ros::Publisher tsdf_slice_pub_;
+  ros::Publisher intersection_count_pub_;
 };
 }  // namespace gazebo
 

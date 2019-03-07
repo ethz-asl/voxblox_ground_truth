@@ -20,16 +20,11 @@ cs_add_executable(ply_to_sdf
     src/io/tinyply.cpp
     src/triangle_geometer.cpp)
 
-
 #################
 # GAZEBO PLUGIN #
 #################
-# TODO(victorr): Check if this is the nice way to do it
-
-find_package(gazebo REQUIRED)
 include_directories(${GAZEBO_INCLUDE_DIRS})
-link_directories(${GAZEBO_LIBRARY_DIRS})
-#list(APPEND CMAKE_CXX_FLAGS "${GAZEBO_CXX_FLAGS}")
-
-add_library(voxblox_ground_truth_plugin SHARED src/user_interfaces/gazebo_plugin.cpp)
-target_link_libraries(voxblox_ground_truth_plugin ${GAZEBO_LIBRARIES})
+cs_add_library(voxblox_ground_truth_plugin SHARED
+    src/user_interfaces/gazebo_plugin.cpp
+    src/sdf_creator.cpp
+    src/triangle_geometer.cpp)

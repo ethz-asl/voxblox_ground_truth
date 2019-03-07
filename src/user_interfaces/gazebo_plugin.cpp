@@ -4,6 +4,7 @@
 
 #include "voxblox_ground_truth/user_interfaces/gazebo_plugin.h"
 #include <string>
+#include "voxblox_ground_truth/sdf_creator.h"
 
 namespace gazebo {
 GZ_REGISTER_WORLD_PLUGIN(VoxbloxGroundTruthPlugin)
@@ -12,29 +13,48 @@ void VoxbloxGroundTruthPlugin::Load(physics::WorldPtr world,
                                     sdf::ElementPtr _sdf) {
   world_ = world;
 
+  // Advertise the TSDF generation service
   std::string service_name = "get_tsdf";
-  gzlog << "Advertising service: " << service_name << std::endl;
-  srv_ = node_handle_.advertiseService(
+  LOG(INFO) << "Advertising service: " << service_name;
+  srv_ = nh_private_.advertiseService(
       service_name, &VoxbloxGroundTruthPlugin::serviceCallback, this);
+
+  // TODO(victorr): Move this to a separate visualization node
+  // Advertise the topics to visualize the SDF map in Rviz
+  tsdf_map_pub_ = nh_private_.advertise<pcl::PointCloud<pcl::PointXYZI>>(
+      "tsdf_map", 1, true);
+  tsdf_map_surface_pub_ =
+      nh_private_.advertise<pcl::PointCloud<pcl::PointXYZI>>("tsdf_map_surface",
+                                                             1, true);
+  tsdf_slice_pub_ = nh_private_.advertise<pcl::PointCloud<pcl::PointXYZI>>(
+      "tsdf_slice", 1, true);
+  intersection_count_pub_ =
+      nh_private_.advertise<pcl::PointCloud<pcl::PointXYZI>>(
+          "intersection_counts", 1, true);
 }
 
 bool VoxbloxGroundTruthPlugin::serviceCallback(
     std_srvs::Empty::Request &request, std_srvs::Empty::Response &response) {
   common::MeshManager *mesh_manager = common::MeshManager::Instance();
   CHECK_NOTNULL(mesh_manager);
+  // Instantiate an SDF creator
+  voxblox::TsdfMap::Config map_config;
+  map_config.tsdf_voxel_size = 0.2;
+  voxblox_ground_truth::SdfCreator sdf_creator(map_config);
+
+  // Iterate over all collision geometries
   for (const physics::ModelPtr &model : world_->GetModels()) {
     for (const physics::LinkPtr &link : model->GetLinks()) {
       for (const physics::CollisionPtr &collision : link->GetCollisions()) {
-        gzlog << "Processing '" << collision->GetScopedName(true) << "'"
-              << std::endl;
+        LOG(INFO) << "Processing '" << collision->GetScopedName(true) << "'";
 
         msgs::Geometry geometry_msg;
         collision->GetShape()->FillMsg(geometry_msg);
         // TODO(victorr): Consider using the SDF directly, instead of the msg
 
-        gzlog << "------------------ SDF ------------------" << std::endl;
-        gzlog << collision->GetShape()->GetSDF()->ToString("") << std::endl;
-        gzlog << "-----------------------------------------" << std::endl;
+        LOG(INFO) << "------------------ SDF ------------------";
+        LOG(INFO) << collision->GetShape()->GetSDF()->ToString("");
+        LOG(INFO) << "-----------------------------------------";
 
         if (geometry_msg.has_type()) {
           std::string geometry_type_str =
@@ -47,8 +67,8 @@ bool VoxbloxGroundTruthPlugin::serviceCallback(
               const common::Mesh *mesh_ptr = mesh_manager->GetMesh(mesh_name);
               if (mesh_ptr) {
                 if (mesh_ptr->GetSubMeshCount() != 1) {
-                  gzerr << "Encountered multiple sub meshes"
-                        << "\nSkipping this mesh." << std::endl;
+                  LOG(ERROR) << "Encountered multiple sub meshes"
+                             << "\nSkipping this mesh.";
                   continue;
                 }
 
@@ -59,17 +79,15 @@ bool VoxbloxGroundTruthPlugin::serviceCallback(
                 if (submesh.GetPrimitiveType() != common::SubMesh::TRIANGLES) {
                   std::string mesh_type_str =
                       mesh_types_names_[submesh.GetPrimitiveType()];
-                  gzerr << "Encountered a mesh with type " << mesh_type_str
-                        << ". Currently, "
-                        << "only triangular meshes are supported."
-                        << "\nSkipping this mesh." << std::endl;
+                  LOG(ERROR) << "Encountered a mesh with type " << mesh_type_str
+                             << ". Currently, "
+                             << "only triangular meshes are supported."
+                             << "\nSkipping this mesh.";
                   continue;
                 }
 
-                // Find the mesh scale factor
-                // NOTE: The shape scale is absolute w.r.t. the world
-                ignition::math::Vector3d shape_scale =
-                    collision->GetShape()->GetScale().Ign();
+                // Find the geometry size
+                // NOTE: The geometry size is already at the defined scale
                 ignition::math::Vector3d geometry_size;
                 if (geometry_type_str == "box") {
                   geometry_size = msgs::ConvertIgn(geometry_msg.box().size());
@@ -84,12 +102,9 @@ bool VoxbloxGroundTruthPlugin::serviceCallback(
                   msgs::Vector2d dimensions = geometry_msg.plane().size();
                   geometry_size.Set(dimensions.x(), dimensions.y(), 1.0);
                 } else {
-                  gzerr << "Could not get geometry size" << std::endl;
+                  LOG(ERROR) << "Could not get geometry size";
                   continue;
                 }
-                ignition::math::Vector3d scale_factor =
-                    geometry_size * shape_scale;
-                gzlog << "Scale " << scale_factor << std::endl;
 
                 // Scale the mesh and transform it into world frame
                 const ignition::math::Pose3d transform =
@@ -100,7 +115,7 @@ bool VoxbloxGroundTruthPlugin::serviceCallback(
                   ignition::math::Vector3d new_vertex =
                       submesh.Vertex(vertex_i);
                   // Scale it to the right size
-                  new_vertex *= scale_factor;
+                  new_vertex *= geometry_size;
                   // Transform it into world frame
                   new_vertex = transform.Rot() * new_vertex;
                   new_vertex += transform.Pos();
@@ -108,23 +123,51 @@ bool VoxbloxGroundTruthPlugin::serviceCallback(
                 }
 
                 unsigned int num_faces = submesh.GetIndexCount() / 3;
-                gzlog << "Integrating " << num_faces << " faces" << std::endl;
+                LOG(INFO) << "Integrating " << num_faces << " faces";
                 for (unsigned int triangle_i = 0; triangle_i < num_faces;
                      triangle_i++) {
-                  // TODO(victorr): Integrate TSDF here
+                  const unsigned int index_a = submesh.GetIndex(triangle_i * 3);
+                  const unsigned int index_b =
+                      submesh.GetIndex(triangle_i * 3 + 1);
+                  const unsigned int index_c =
+                      submesh.GetIndex(triangle_i * 3 + 2);
+
+                  const Point vertex_a = {
+                      static_cast<float>(submesh.Vertex(index_a).X()),
+                      static_cast<float>(submesh.Vertex(index_a).Y()),
+                      static_cast<float>(submesh.Vertex(index_a).Z())};
+                  const Point vertex_b = {
+                      static_cast<float>(submesh.Vertex(index_b).X()),
+                      static_cast<float>(submesh.Vertex(index_b).Y()),
+                      static_cast<float>(submesh.Vertex(index_b).Z())};
+                  const Point vertex_c = {
+                      static_cast<float>(submesh.Vertex(index_c).X()),
+                      static_cast<float>(submesh.Vertex(index_c).Y()),
+                      static_cast<float>(submesh.Vertex(index_c).Z())};
+
+                  sdf_creator.addTriangle(vertex_a, vertex_b, vertex_c);
                 }
               } else {
-                gzwarn << "Could not get pointer to mesh '" << mesh_name << "'"
-                       << std::endl;
+                LOG(WARNING) << "Could not get pointer to mesh '" << mesh_name
+                             << "'";
+                return false;
               }
             } else {
-              gzwarn << "Could not get pointer to MeshManager" << std::endl;
+              LOG(WARNING) << "Could not get pointer to MeshManager";
+              return false;
             }
           } else {
-            gzwarn << "Not yet able to process shapes of type: "
-                   << geometry_type_str << std::endl;
+            LOG(WARNING) << "Not yet able to process shapes of type: "
+                         << geometry_type_str;
+            return false;
             // TODO(victorr): Add support for Mesh shapes
             // physics::Base::MESH_SHAPE through MeshManager::Load(file_name)
+            //  // NOTE: The shape scale is absolute w.r.t. the world
+            //  ignition::math::Vector3d shape_scale =
+            //  collision->GetShape()->GetScale().Ign();
+            //  LOG(INFO) << "Scale: geometry size " << geometry_size << ", "
+            //            << "shape_scale " << shape_scale << "\n-> "
+            //            << "scale factor " << scale_factor;
 
             // Find out if these are useful and if so how to mesh them:
             // physics::Base::POLYLINE_SHAPE
@@ -134,7 +177,8 @@ bool VoxbloxGroundTruthPlugin::serviceCallback(
             // physics::Base::RAY_SHAPE
           }
         } else {
-          gzwarn << "Geometry type not available" << std::endl;
+          LOG(WARNING) << "Geometry type not available";
+          return false;
         }
       }
     }
@@ -143,7 +187,31 @@ bool VoxbloxGroundTruthPlugin::serviceCallback(
   // TODO(victorr): Plot the meshes in Gazebo (on another layer)
   //                to make sure they overlap and are complete
 
-  // TODO(victorr): Publish the TSDF on a topic
+  // Publish the TSDF
+  pcl::PointCloud<pcl::PointXYZI> tsdf_map_ptcloud_msg;
+  pcl::PointCloud<pcl::PointXYZI> tsdf_map_surface_ptcloud_msg;
+  pcl::PointCloud<pcl::PointXYZI> tsdf_slice_ptcloud_msg;
+  pcl::PointCloud<pcl::PointXYZI> intersection_count_msg;
+  tsdf_map_ptcloud_msg.header.frame_id = "world";
+  tsdf_map_surface_ptcloud_msg.header.frame_id = "world";
+  tsdf_slice_ptcloud_msg.header.frame_id = "world";
+  intersection_count_msg.header.frame_id = "world";
+  voxblox::createDistancePointcloudFromTsdfLayer(
+      sdf_creator.getTsdfMap().getTsdfLayer(), &tsdf_map_ptcloud_msg);
+  voxblox::createSurfaceDistancePointcloudFromTsdfLayer(
+      sdf_creator.getTsdfMap().getTsdfLayer(), 0.1,
+      &tsdf_map_surface_ptcloud_msg);
+  voxblox::createDistancePointcloudFromTsdfLayerSlice(
+      sdf_creator.getTsdfMap().getTsdfLayer(), 2, 0.5, &tsdf_slice_ptcloud_msg);
+  voxblox::createColorPointcloudFromLayer<IntersectionVoxel>(
+      sdf_creator.getIntersectionLayer(), &visualizeIntersectionCount,
+      &intersection_count_msg);
+  tsdf_map_pub_.publish(tsdf_map_ptcloud_msg);
+  tsdf_map_surface_pub_.publish(tsdf_map_surface_ptcloud_msg);
+  tsdf_slice_pub_.publish(tsdf_slice_ptcloud_msg);
+  intersection_count_pub_.publish(intersection_count_msg);
+
+  return true;
 }
 
 }  // namespace gazebo

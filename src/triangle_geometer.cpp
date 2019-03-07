@@ -82,11 +82,14 @@ bool TriangleGeometer::point_in_triangle_2d(const Point2D &point,
                                             Point2D vertex_a, Point2D vertex_b,
                                             Point2D vertex_c,
                                             Point *barycentric_coordinates) {
+  CHECK_NOTNULL(barycentric_coordinates);
+
+  // Express the vertices relative to the point
   vertex_a -= point;
   vertex_b -= point;
   vertex_c -= point;
 
-  // TODO(victorr): Use ->at(0) notation instead of ->operator[](0)
+  // TODO(victorr): Document this function
   int sign_a =
       orientation(vertex_b, vertex_c, &barycentric_coordinates->operator[](0));
   if (sign_a == 0) return false;
@@ -104,10 +107,11 @@ bool TriangleGeometer::point_in_triangle_2d(const Point2D &point,
   double sum = barycentric_coordinates->sum();
   CHECK_NE(sum, 0);
 
-  // TODO(victorr): Use ->at(0) notation instead of ->operator[](0)
+  // Normalize the barycentric coordinates
   barycentric_coordinates->operator[](0) /= sum;
   barycentric_coordinates->operator[](1) /= sum;
   barycentric_coordinates->operator[](2) /= sum;
+
   return true;
 }
 
@@ -116,6 +120,7 @@ int TriangleGeometer::orientation(const Point2D &vertex_one,
                                   float *twice_signed_area) {
   CHECK_NOTNULL(twice_signed_area);
 
+  // TODO(victorr): Document this function
   *twice_signed_area =
       vertex_one[1] * vertex_two[0] - vertex_one[0] * vertex_two[1];
 

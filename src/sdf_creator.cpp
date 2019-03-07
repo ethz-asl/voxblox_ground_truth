@@ -34,6 +34,7 @@ void SdfCreator::addTriangle(const Point &vertex_a, const Point &vertex_b,
                                    .ceil()
                                    .cast<LongIndexElement>();
   // Add padding
+  // TODO(victorr): Set the padding from a variable
   const GlobalIndex voxel_index_min = aabb_min_index.array() - 1;
   const GlobalIndex voxel_index_max = aabb_max_index.array() + 1;
 
@@ -112,7 +113,7 @@ void SdfCreator::addTriangle(const Point &vertex_a, const Point &vertex_b,
 }
 
 void SdfCreator::updateSigns() {
-  std::cout << "Computing the signs..." << std::endl;
+  LOG(INFO) << "Computing the signs...";
 
   // Get the TSDF AABB, expressed in voxel index units
   GlobalIndex global_voxel_index_min =
@@ -182,6 +183,7 @@ void SdfCreator::updateSigns() {
 
   // Indicate that the signs are now up to date
   signs_up_to_date_ = true;
+  LOG(INFO) << "Computing signs completed.";
 }
 
 const voxblox::TsdfMap &SdfCreator::getTsdfMap() {

@@ -23,6 +23,7 @@ struct TriangularFace {
   uint32_t vertex_id_c;
 };
 
+// Axis Aligned Bounding Box struct
 struct AABB {
   Point min = {INFINITY, INFINITY, INFINITY};
   Point max = {-INFINITY, -INFINITY, -INFINITY};

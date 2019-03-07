@@ -20,15 +20,14 @@
 // TODO(victorr): Move out all the debugging visuals and
 //                make this a proper command line tool
 int main(int argc, char *argv[]) {
-  namespace ph = std::placeholders;
   using PointcloudMsg = pcl::PointCloud<pcl::PointXYZI>;
   // TODO(victorr): Implement args format check
   // TODO(victorr): Implement --help
 
-  // TODO(victorr): Move the visuals to a separate class
+  // TODO(victorr): Move the visuals to a separate visualization node
   /* Advertise the debugging ROS topic */
   // Register with ROS
-  ros::init(argc, argv, "voxgraph_odometry_simulator");
+  ros::init(argc, argv, "voxblox_ground_truth");
   ros::NodeHandle nh_private("~");
   // Advertise the topics to visualize the SDF map in Rviz
   ros::Publisher tsdf_map_pub =
