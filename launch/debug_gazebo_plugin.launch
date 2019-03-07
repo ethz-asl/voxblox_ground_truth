@@ -17,4 +17,6 @@
       <!--<arg name="paused" value="true"/>-->
     </include>
   </group>
+
+  <node pkg="rviz" type="rviz" name="$(anon rviz)" respawn="false" output="screen"/>
 </launch>
