@@ -11,16 +11,24 @@
 typedef Eigen::Vector3f Point;
 typedef Eigen::Vector2f Point2D;
 
-// Voxel used to track the intersection counts, used to derive the SDF sign
+// Voxel used to track the intersection counts
+// NOTE: The intersection map is used to derive signs of the SDF map
 struct IntersectionVoxel {
   unsigned int count = 0;
 };
 
-struct TriangularFace {
-  // IDs of the vertices for all three triangle corners
+// IDs of the vertices for all three triangle corners
+struct TriangularFaceVertexIds {
   uint32_t vertex_id_a;
   uint32_t vertex_id_b;
   uint32_t vertex_id_c;
+};
+
+// Coordinates of the vertices for all three triangle corners
+struct TriangularFaceVertexCoordinates {
+  Point vertex_a;
+  Point vertex_b;
+  Point vertex_c;
 };
 
 // Axis Aligned Bounding Box struct
@@ -38,7 +46,6 @@ struct AABB {
 inline bool visualizeIntersectionCount(
     const IntersectionVoxel& voxel, const Point& /*coord*/, double* intensity) {
   CHECK_NOTNULL(intensity);
-  constexpr float kMinWeight = 1e-3;
   if (voxel.count > 0) {
     *intensity = voxel.count;
     return true;

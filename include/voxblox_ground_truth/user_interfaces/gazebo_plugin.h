@@ -13,11 +13,15 @@
 #include <gazebo/physics/physics.hh>
 #include <string>
 #include <vector>
+#include "voxblox_ground_truth/sdf_visualizer.h"
 
 namespace gazebo {
 class VoxbloxGroundTruthPlugin : public WorldPlugin {
  public:
-  VoxbloxGroundTruthPlugin() : WorldPlugin(), nh_private_("~") {}
+  VoxbloxGroundTruthPlugin()
+      : WorldPlugin(),
+        nh_private_("~"),
+        sdf_visualizer_(nh_private_) {}
 
   void Load(physics::WorldPtr world, sdf::ElementPtr _sdf) override;
 
@@ -29,14 +33,10 @@ class VoxbloxGroundTruthPlugin : public WorldPlugin {
   ros::NodeHandle nh_private_;
   ros::ServiceServer srv_;
 
-  std::vector<std::string> mesh_types_names_ = {
+  std::vector<std::string> mesh_type_names_ = {
       "POINTS", "LINES", "LINESTRIPS", "TRIANGLES", "TRIFANS", "TRISTRIPS"};
 
-  // Rviz publishers for debugging
-  ros::Publisher tsdf_map_pub_;
-  ros::Publisher tsdf_map_surface_pub_;
-  ros::Publisher tsdf_slice_pub_;
-  ros::Publisher intersection_count_pub_;
+  voxblox_ground_truth::SdfVisualizer sdf_visualizer_;
 };
 }  // namespace gazebo
 

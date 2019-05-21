@@ -10,21 +10,22 @@
 namespace voxblox_ground_truth {
 class TriangleGeometer {
  public:
-  // TODO(victorr): Make this method non-static and have the instance
-  //                keep track of the vertices
-  static float distance_point_to_triangle(const Point &point,
-                                          const Point &vertex_a,
-                                          const Point &vertex_b,
-                                          const Point &vertex_c);
+  explicit TriangleGeometer(TriangularFaceVertexCoordinates vertex_coordinates)
+      : vertices_(std::move(vertex_coordinates)) {}
 
-  static bool point_in_triangle_2d(const Point2D &point, Point2D vertex_a,
-                                   Point2D vertex_b, Point2D vertex_c,
-                                   Point *barycentric_coordinates);
+  AABB getAABB() const;
+
+  float getDistanceToPoint(const Point &point) const;
+
+  bool getRayIntersection(const Point2D &ray_yz,
+                          Point *barycentric_coordinates) const;
 
  private:
-  // TODO(victorr): Give this method a better name
-  static int orientation(const Point2D &vertex_one, const Point2D &vertex_two,
-                         float *twice_signed_area);
+  const TriangularFaceVertexCoordinates vertices_;
+
+  int getRelativeOrientation(const Point2D &vertex_one,
+                             const Point2D &vertex_two,
+                             float *twice_signed_area) const;
 };
 }  // namespace voxblox_ground_truth
 

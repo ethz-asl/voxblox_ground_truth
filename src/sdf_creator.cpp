@@ -2,8 +2,9 @@
 // Created by victor on 04.03.19.
 //
 
-#include "voxblox_ground_truth/sdf_creator.h"
 #include <limits>
+#include <ros/ros.h>
+#include "voxblox_ground_truth/sdf_creator.h"
 #include "voxblox_ground_truth/triangle_geometer.h"
 
 namespace voxblox_ground_truth {
@@ -19,13 +20,17 @@ SdfCreator::SdfCreator(voxblox::TsdfMap::Config map_config)
                           map_config.tsdf_voxels_per_side),
       signs_up_to_date_(false) {}
 
-void SdfCreator::addTriangle(const Point &vertex_a, const Point &vertex_b,
-                             const Point &vertex_c) {
+void SdfCreator::integrateTriangle(
+    const TriangularFaceVertexCoordinates &vertex_coordinates) {
   // Indicate that the computed signs are no longer valid
   signs_up_to_date_ = false;
 
+  // Instantiate the triangle geometry tool
+  const TriangleGeometer triangle_geometer(vertex_coordinates);
+
   // Get the triangle's Axis Aligned Bounding Box
-  AABB aabb_tight = AABB::fromPoints(vertex_a, vertex_b, vertex_c);
+  const AABB aabb_tight = triangle_geometer.getAABB();
+
   // Express the AABB corners in voxel index units
   GlobalIndex aabb_min_index = (aabb_tight.min.array() * voxel_size_inv_)
                                    .floor()
@@ -33,28 +38,19 @@ void SdfCreator::addTriangle(const Point &vertex_a, const Point &vertex_b,
   GlobalIndex aabb_max_index = (aabb_tight.max.array() * voxel_size_inv_)
                                    .ceil()
                                    .cast<LongIndexElement>();
-  // Add padding
-  // TODO(victorr): Set the padding from a variable
-  const GlobalIndex voxel_index_min = aabb_min_index.array() - 1;
-  const GlobalIndex voxel_index_max = aabb_max_index.array() + 1;
+
+  // Add padding to the AABB indices
+  const GlobalIndex voxel_index_min = aabb_min_index.array() - aabb_padding_;
+  const GlobalIndex voxel_index_max = aabb_max_index.array() + aabb_padding_;
 
   // Iterate over all voxels within the triangle's padded AABB
   LongIndexElement x, y, z;
-  Point voxel_origin;
   for (z = voxel_index_min[2]; z < voxel_index_max[2]; z++) {
     for (y = voxel_index_min[1]; y < voxel_index_max[1]; y++) {
       for (x = voxel_index_min[0]; x < voxel_index_max[0]; x++) {
         GlobalIndex voxel_index(x, y, z);
 
-        // Compute distance to triangle
-        // TODO(victorr): Check if voxblox stores the distances
-        //                at the voxel origins or at the voxel centers
-        voxel_origin =
-            voxblox::getOriginPointFromGridIndex(voxel_index, voxel_size_);
-        float distance = TriangleGeometer::distance_point_to_triangle(
-            voxel_origin, vertex_a, vertex_b, vertex_c);
-
-        // Get the indices of the corresponding voxel and its containing block
+        // Get the indices of the current voxel and its containing block
         BlockIndex block_index = voxblox::getBlockIndexFromGlobalVoxelIndex(
             voxel_index, voxels_per_side_inv_);
         VoxelIndex local_voxel_index = voxblox::getLocalFromGlobalVoxelIndex(
@@ -66,6 +62,11 @@ void SdfCreator::addTriangle(const Point &vertex_a, const Point &vertex_b,
         voxblox::TsdfVoxel &voxel =
             block_ptr->getVoxelByVoxelIndex(local_voxel_index);
 
+        // Compute distance to triangle
+        const Point voxel_origin =
+            voxblox::getOriginPointFromGridIndex(voxel_index, voxel_size_);
+        float distance = triangle_geometer.getDistanceToPoint(voxel_origin);
+
         // Update voxel if new distance is lower or if it is new
         // TODO(victorr): Take the absolute distance, to account for signs that
         //                might already have been computed
@@ -76,20 +77,21 @@ void SdfCreator::addTriangle(const Point &vertex_a, const Point &vertex_b,
       }
 
       // Mark intersections
-      // TODO(victorr): Add proper explanation
-      // Check if the ray parallel to x axis through voxel origin collides with
-      // the triangle. Note, since we don't care about x we can simply use the
-      // last voxel_origin.
+      // NOTE: We check if and where the ray that lies parallel to the x axis
+      //       and goes through voxel origin collides with the triangle.
+      //       If it does, we increase the intersection counter for the voxel
+      //       containing the intersection.
+      Point2D ray;
+      ray << y, z;
       Point barycentric_coordinates;
-      bool point_in_triangle_2d = TriangleGeometer::point_in_triangle_2d(
-          voxel_origin.tail<2>(), vertex_a.tail<2>(), vertex_b.tail<2>(),
-          vertex_c.tail<2>(), &barycentric_coordinates);
+      bool point_in_triangle_2d =
+          triangle_geometer.getRayIntersection(ray, &barycentric_coordinates);
       if (point_in_triangle_2d) {
-        // Get the voxel x_index at the intersection
+        // Get the voxel x index at the intersection
         float intersection_x_coordinate =
-            barycentric_coordinates[0] * vertex_a[0] +
-            barycentric_coordinates[1] * vertex_b[0] +
-            barycentric_coordinates[2] * vertex_c[0];
+            barycentric_coordinates[0] * vertex_coordinates.vertex_a[0] +
+            barycentric_coordinates[1] * vertex_coordinates.vertex_b[0] +
+            barycentric_coordinates[2] * vertex_coordinates.vertex_c[0];
         auto intersection_x_index = static_cast<IndexElement>(
             std::ceil(intersection_x_coordinate * voxel_size_inv_));
 
@@ -152,8 +154,6 @@ void SdfCreator::updateSigns() {
         // Exit if CTRL+C was pressed
         if (!ros::ok()) {
           std::cout << "\nShutting down..." << std::endl;
-          // TODO(victorr): Use std::throw instead
-          // return -1;
           return;
         }
 
