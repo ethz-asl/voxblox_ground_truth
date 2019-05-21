@@ -15,7 +15,7 @@
 
 // For debugging only
 #include <ros/ros.h>
-#include <voxblox_ros/ptcloud_vis.h>
+#include "voxblox_ground_truth/sdf_visualizer.h"
 
 // TODO(victorr): Move out all the debugging visuals and
 //                make this a proper command line tool
@@ -24,18 +24,12 @@ int main(int argc, char *argv[]) {
   // TODO(victorr): Implement args format check
   // TODO(victorr): Implement --help
 
-  // TODO(victorr): Move the visuals to a separate visualization node
   /* Advertise the debugging ROS topic */
   // Register with ROS
   ros::init(argc, argv, "voxblox_ground_truth");
   ros::NodeHandle nh_private("~");
   // Advertise the topics to visualize the SDF map in Rviz
-  ros::Publisher tsdf_map_pub =
-      nh_private.advertise<PointcloudMsg>("tsdf_map", 1, true);
-  ros::Publisher tsdf_slice_pub =
-      nh_private.advertise<PointcloudMsg>("tsdf_slice", 1, true);
-  ros::Publisher intersection_count_pub =
-      nh_private.advertise<PointcloudMsg>("intersection_counts", 1, true);
+  voxblox_ground_truth::SdfVisualizer sdf_visualizer(nh_private);
 
   /* Process the command line arguments */
   std::string ply_filepath(argv[1]);
@@ -43,6 +37,14 @@ int main(int argc, char *argv[]) {
   float voxel_size;
   voxel_size_raw >> voxel_size;
 
+  // TODO(victorr): Read the Transform from params as X Y Z Qx Qy Qz Qw
+  // Transform the .ply into the right reference frame
+  voxblox::Transformation transform;
+  voxblox::Transformation::Vector3 scaled_axis_angle(3.14 / 2.0, 0, 0);
+  transform.getRotation() = voxblox::Rotation(scaled_axis_angle);
+  double scale_factor = 100;
+
+  // TODO(victorr): Use PCL .ply mesh parser instead
   /* Parse the PLY file */
   std::cout << "Importing .ply file: " << ply_filepath << std::endl;
   std::ifstream ply_ss(ply_filepath, std::ios::binary);
@@ -77,7 +79,7 @@ int main(int argc, char *argv[]) {
   std::memcpy(vertices.data(), ply_vertices->buffer.get(), numVerticesBytes);
 
   // Cast triangular faces
-  std::vector<TriangularFace> triangles(ply_faces->count);
+  std::vector<TriangularFaceVertexIds> triangles(ply_faces->count);
   const size_t numFacesBytes = ply_faces->buffer.size_bytes();
   std::memcpy(triangles.data(), ply_faces->buffer.get(), numFacesBytes);
 
@@ -87,15 +89,9 @@ int main(int argc, char *argv[]) {
   map_config.tsdf_voxel_size = voxel_size;
   voxblox_ground_truth::SdfCreator sdf_creator(map_config);
 
-  // Transform the .ply into the right reference frame
-  voxblox::Transformation transform;
-  voxblox::Transformation::Vector3 scaled_axis_angle(3.14 / 2.0, 0, 0);
-  transform.getRotation() = voxblox::Rotation(scaled_axis_angle);
-  double scale_factor = 100;
-
   // Iterate over all triangles
   size_t triangle_i = 0;
-  for (const TriangularFace &triangle : triangles) {
+  for (const TriangularFaceVertexIds &triangle : triangles) {
     // Indicate progress
     triangle_i++;
     // Only print progress for each promile of completion, to reduce IO wait
@@ -113,36 +109,30 @@ int main(int argc, char *argv[]) {
     }
 
     // Get the triangle vertices
-    const Point &vertex_a =
+    TriangularFaceVertexCoordinates triangle_vertices;
+    triangle_vertices.vertex_a =
         scale_factor * (transform * vertices[triangle.vertex_id_a]);
-    const Point &vertex_b =
+    triangle_vertices.vertex_b =
         scale_factor * (transform * vertices[triangle.vertex_id_b]);
-    const Point &vertex_c =
+    triangle_vertices.vertex_c =
         scale_factor * (transform * vertices[triangle.vertex_id_c]);
 
     // Update the SDF with the new triangle
-    sdf_creator.addTriangle(vertex_a, vertex_b, vertex_c);
+    sdf_creator.integrateTriangle(triangle_vertices);
   }
   std::cout << "\nDistance field building complete." << std::endl;
 
   /* Publish debugging visuals */
-  std::cout << "Publishing visuals" << std::endl;
-  PointcloudMsg tsdf_map_ptcloud_msg;
-  PointcloudMsg tsdf_slice_ptcloud_msg;
-  PointcloudMsg intersection_count_msg;
-  tsdf_map_ptcloud_msg.header.frame_id = "world";
-  tsdf_slice_ptcloud_msg.header.frame_id = "world";
-  intersection_count_msg.header.frame_id = "world";
-  voxblox::createDistancePointcloudFromTsdfLayer(
-      sdf_creator.getTsdfMap().getTsdfLayer(), &tsdf_map_ptcloud_msg);
-  voxblox::createDistancePointcloudFromTsdfLayerSlice(
-      sdf_creator.getTsdfMap().getTsdfLayer(), 2, 8, &tsdf_slice_ptcloud_msg);
-  voxblox::createColorPointcloudFromLayer<IntersectionVoxel>(
-      sdf_creator.getIntersectionLayer(), &visualizeIntersectionCount,
-      &intersection_count_msg);
-  tsdf_map_pub.publish(tsdf_map_ptcloud_msg);
-  tsdf_slice_pub.publish(tsdf_slice_ptcloud_msg);
-  intersection_count_pub.publish(intersection_count_msg);
+  bool publish_debug_visuals = false;
+  nh_private.param("publish_visuals", publish_debug_visuals,
+                   publish_debug_visuals);
+  if (publish_debug_visuals) {
+    std::cout << "Publishing visuals" << std::endl;
+    sdf_visualizer.publishTsdfVisuals(
+        sdf_creator.getTsdfMap().getTsdfLayer());
+    sdf_visualizer.publishIntersectionVisuals(
+        sdf_creator.getIntersectionLayer());
+  }
 
   std::cout << "Done" << std::endl;
   ros::spin();
