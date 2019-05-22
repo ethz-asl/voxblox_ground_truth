@@ -2,6 +2,7 @@
 // Created by victor on 13.02.19.
 //
 
+#include <pcl/io/ply_io.h>
 #include <cstring>
 #include <fstream>
 #include <iostream>
@@ -10,15 +11,12 @@
 #include <string>
 #include <vector>
 #include "voxblox_ground_truth/common.h"
-#include "voxblox_ground_truth/io/tinyply.h"
 #include "voxblox_ground_truth/sdf_creator.h"
 
 // For debugging only
 #include <ros/ros.h>
 #include "voxblox_ground_truth/sdf_visualizer.h"
 
-// TODO(victorr): Move out all the debugging visuals and
-//                make this a proper command line tool
 int main(int argc, char *argv[]) {
   using PointcloudMsg = pcl::PointCloud<pcl::PointXYZI>;
   // TODO(victorr): Implement args format check
@@ -39,49 +37,17 @@ int main(int argc, char *argv[]) {
 
   // TODO(victorr): Read the Transform from params as X Y Z Qx Qy Qz Qw
   // Transform the .ply into the right reference frame
+  double scale_factor = 100;
   voxblox::Transformation transform;
   voxblox::Transformation::Vector3 scaled_axis_angle(3.14 / 2.0, 0, 0);
   transform.getRotation() = voxblox::Rotation(scaled_axis_angle);
-  double scale_factor = 100;
 
-  // TODO(victorr): Use PCL .ply mesh parser instead
-  /* Parse the PLY file */
+  /* Load the PLY file */
+  pcl::PolygonMesh mesh;
   std::cout << "Importing .ply file: " << ply_filepath << std::endl;
-  std::ifstream ply_ss(ply_filepath, std::ios::binary);
-  if (ply_ss.fail()) {
-    throw std::runtime_error("ERROR: File could not be opened.");
-  }
-
-  // Instantiate tinyply and parse the file header
-  tinyply::PlyFile ply_file;
-  ply_file.parse_header(ply_ss);
-
-  // Indicate which fields should be imported (vertices and faces)
-  std::shared_ptr<tinyply::PlyData> ply_vertices, ply_faces;
-  ply_vertices =
-      ply_file.request_properties_from_element("vertex", {"x", "y", "z"});
-  ply_faces =
-      ply_file.request_properties_from_element("face", {"vertex_indices"}, 3);
-  // NOTE: At the moment only triangular meshes are supported by this program.
-  //       The included tinyply parser has therefore been modified to
-  //       assert that all lists exactly fit their size hint. In this case
-  //       this enforces that all faces have 3 vertices (i.e. are triangular).
-
-  // Parse the file's data
-  ply_file.read(ply_ss);
-  std::cout << "-- total number of vertices " << ply_vertices->count
-            << std::endl;
-  std::cout << "-- total number of faces " << ply_faces->count << std::endl;
-
-  // Cast vertices
-  std::vector<Point> vertices(ply_vertices->count);
-  const size_t numVerticesBytes = ply_vertices->buffer.size_bytes();
-  std::memcpy(vertices.data(), ply_vertices->buffer.get(), numVerticesBytes);
-
-  // Cast triangular faces
-  std::vector<TriangularFaceVertexIds> triangles(ply_faces->count);
-  const size_t numFacesBytes = ply_faces->buffer.size_bytes();
-  std::memcpy(triangles.data(), ply_faces->buffer.get(), numFacesBytes);
+  pcl::io::loadPLYFile(ply_filepath, mesh);
+  pcl::PointCloud<pcl::PointXYZ> vertex_coordinates;
+  pcl::fromPCLPointCloud2(mesh.cloud, vertex_coordinates);
 
   // Initialize the SDF creator
   std::cout << "Generating the TSDF" << std::endl;
@@ -91,13 +57,17 @@ int main(int argc, char *argv[]) {
 
   // Iterate over all triangles
   size_t triangle_i = 0;
-  for (const TriangularFaceVertexIds &triangle : triangles) {
+  size_t num_triangles = mesh.polygons.size();
+  for (const pcl::Vertices &polygon : mesh.polygons) {
+    // Ensure that the polygon is a triangle (other meshes are not supported)
+    CHECK_EQ(polygon.vertices.size(), 3);
+
     // Indicate progress
     triangle_i++;
     // Only print progress for each promile of completion, to reduce IO wait
-    if (triangle_i % (triangles.size() / 1000) == 0) {
+    if (triangle_i % (num_triangles / 1000) == 0) {
       printf("\rProgress: %3.1f%% - total nr of blocks %lu",
-             triangle_i / static_cast<double>(triangles.size()) * 100,
+             triangle_i / static_cast<double>(num_triangles) * 100,
              sdf_creator.getNumberOfAllocatedBlocks());
       std::cout << std::flush;
     }
@@ -108,14 +78,19 @@ int main(int argc, char *argv[]) {
       return -1;
     }
 
-    // Get the triangle vertices
+    // Extract the triangle's vertices from the vertex coordinate pointcloud
+    const Point vertex_a =
+        vertex_coordinates[polygon.vertices[0]].getVector3fMap();
+    const Point vertex_b =
+        vertex_coordinates[polygon.vertices[1]].getVector3fMap();
+    const Point vertex_c =
+        vertex_coordinates[polygon.vertices[2]].getVector3fMap();
+
+    // Transform the vertices from mesh frame into world frame
     TriangularFaceVertexCoordinates triangle_vertices;
-    triangle_vertices.vertex_a =
-        scale_factor * (transform * vertices[triangle.vertex_id_a]);
-    triangle_vertices.vertex_b =
-        scale_factor * (transform * vertices[triangle.vertex_id_b]);
-    triangle_vertices.vertex_c =
-        scale_factor * (transform * vertices[triangle.vertex_id_c]);
+    triangle_vertices.vertex_a = scale_factor * (transform * vertex_a);
+    triangle_vertices.vertex_b = scale_factor * (transform * vertex_b);
+    triangle_vertices.vertex_c = scale_factor * (transform * vertex_c);
 
     // Update the SDF with the new triangle
     sdf_creator.integrateTriangle(triangle_vertices);
@@ -123,7 +98,7 @@ int main(int argc, char *argv[]) {
   std::cout << "\nDistance field building complete." << std::endl;
 
   /* Publish debugging visuals */
-  bool publish_debug_visuals = false;
+  bool publish_debug_visuals = true;
   nh_private.param("publish_visuals", publish_debug_visuals,
                    publish_debug_visuals);
   if (publish_debug_visuals) {
