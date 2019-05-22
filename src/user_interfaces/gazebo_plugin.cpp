@@ -151,24 +151,15 @@ bool VoxbloxGroundTruthPlugin::serviceCallback(
               return false;
             }
           } else {
+            // TODO(victorr): Add support for remaining Mesh shapes, namely
+            //                - physics::Base::POLYLINE_SHAPE
+            //                - physics::Base::HEIGHTMAP_SHAPE
+            //                - physics::Base::MAP_SHAPE
+            //                - physics::Base::MULTIRAY_SHAPE
+            //                - physics::Base::RAY_SHAPE
             LOG(WARNING) << "Not yet able to process shapes of type: "
                          << geometry_type_str;
             return false;
-            // TODO(victorr): Add support for remaining Mesh shapes
-            // physics::Base::MESH_SHAPE through MeshManager::Load(file_name)
-            //  // NOTE: The shape scale is absolute w.r.t. the world
-            //  ignition::math::Vector3d shape_scale =
-            //  collision->GetShape()->GetScale().Ign();
-            //  LOG(INFO) << "Scale: geometry size " << geometry_size << ", "
-            //            << "shape_scale " << shape_scale << "\n-> "
-            //            << "scale factor " << scale_factor;
-
-            // Find out if these are useful and if so how to mesh them:
-            // physics::Base::POLYLINE_SHAPE
-            // physics::Base::HEIGHTMAP_SHAPE
-            // physics::Base::MAP_SHAPE
-            // physics::Base::MULTIRAY_SHAPE
-            // physics::Base::RAY_SHAPE
           }
         } else {
           LOG(WARNING) << "Geometry type not available";
