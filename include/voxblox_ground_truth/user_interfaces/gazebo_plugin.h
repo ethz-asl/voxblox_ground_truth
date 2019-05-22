@@ -7,7 +7,7 @@
 
 #include <glog/logging.h>
 #include <ros/ros.h>
-#include <std_srvs/Empty.h>
+#include <voxblox_msgs/FilePath.h>
 #include <gazebo/gazebo.hh>
 #include <gazebo/physics/PhysicsTypes.hh>
 #include <gazebo/physics/physics.hh>
@@ -18,19 +18,17 @@
 namespace gazebo {
 class VoxbloxGroundTruthPlugin : public WorldPlugin {
  public:
-  VoxbloxGroundTruthPlugin()
-      : WorldPlugin(),
-        nh_private_("~"),
-        sdf_visualizer_(nh_private_) {}
+  VoxbloxGroundTruthPlugin();
 
   void Load(physics::WorldPtr world, sdf::ElementPtr _sdf) override;
 
-  bool serviceCallback(std_srvs::Empty::Request &request,     // NOLINT
-                       std_srvs::Empty::Response &response);  // NOLINT
+  bool serviceCallback(voxblox_msgs::FilePath::Request &request,     // NOLINT
+                       voxblox_msgs::FilePath::Response &response);  // NOLINT
 
  private:
   physics::WorldPtr world_;
   ros::NodeHandle nh_private_;
+  voxblox::FloatingPoint voxel_size_;
   ros::ServiceServer srv_;
 
   std::vector<std::string> mesh_type_names_ = {

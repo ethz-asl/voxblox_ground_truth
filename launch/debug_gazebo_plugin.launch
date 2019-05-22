@@ -1,4 +1,8 @@
 <launch>
+  <param name="/voxblox_ground_truth/voxel_size" value="0.2"/>
+  <!-- Save the ground truth voxblox map with:
+       rosservice call /gazebo/save_voxblox_ground_truth_to_file "file_path: '/home/you/ground_truth_map_name.tsdf'"-->
+
   <arg name="show_gazebo" default="true"/>
 
   <!-- Launch Gazebo world -->
@@ -8,15 +12,16 @@
     <env name="GAZEBO_RESOURCE_PATH" value="${GAZEBO_RESOURCE_PATH}:$(find rotors_gazebo)/models"/>
 
     <!-- Add firefighting_arena models and resources to gazebo path -->
-    <env name="GAZEBO_MODEL_PATH" value="${GAZEBO_MODEL_PATH}:$(find firefighting_arena)/models"/>
-    <env name="GAZEBO_RESOURCE_PATH" value="${GAZEBO_RESOURCE_PATH}:$(find firefighting_arena)/models"/>
+    <env name="GAZEBO_MODEL_PATH" value="${GAZEBO_MODEL_PATH}:$(find firefighting_simulation_arena)/models"/>
+    <env name="GAZEBO_RESOURCE_PATH" value="${GAZEBO_RESOURCE_PATH}:$(find firefighting_simulation_arena)/models"/>
 
     <include file="$(find gazebo_ros)/launch/empty_world.launch">
-      <arg name="world_name" value="$(find firefighting_arena)/worlds/burning_building.world"/>
+      <arg name="world_name" value="$(find firefighting_simulation_arena)/worlds/burning_building_rubble.world"/>
       <!--<arg name="debug" value="true"/>-->
       <!--<arg name="paused" value="true"/>-->
     </include>
   </group>
 
-  <node pkg="rviz" type="rviz" name="$(anon rviz)" respawn="false" output="screen"/>
+  <arg name="rviz_file" default="$(find voxblox_ground_truth)/config/debug_gazebo_plugin.rviz" />
+  <node pkg="rviz" type="rviz" name="$(anon rviz)" respawn="false" args="-d $(arg rviz_file)" output="screen"/>
 </launch>
