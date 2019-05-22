@@ -73,7 +73,7 @@ void SdfCreator::integrateTriangle(
         //                might already have been computed
         if (distance < voxel.distance || voxel.weight == 0.0f) {
           voxel.distance = distance;
-          voxel.weight = 1;
+          voxel.weight += 1;
         }
       }
 

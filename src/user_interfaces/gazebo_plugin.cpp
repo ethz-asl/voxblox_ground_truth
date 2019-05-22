@@ -9,24 +9,32 @@
 namespace gazebo {
 GZ_REGISTER_WORLD_PLUGIN(VoxbloxGroundTruthPlugin)
 
+VoxbloxGroundTruthPlugin::VoxbloxGroundTruthPlugin()
+    : WorldPlugin(), nh_private_("~"), sdf_visualizer_(nh_private_) {
+  // Read the voxel size from ROS params
+  CHECK(nh_private_.getParam("/voxblox_ground_truth/voxel_size", voxel_size_))
+      << "ROS param /voxblox_ground_truth/voxel_size must be set.";
+}
+
 void VoxbloxGroundTruthPlugin::Load(physics::WorldPtr world,
                                     sdf::ElementPtr _sdf) {
   world_ = world;
 
   // Advertise the TSDF generation service
-  std::string service_name = "get_tsdf";
+  std::string service_name = "save_voxblox_ground_truth_to_file";
   LOG(INFO) << "Advertising service: " << service_name;
   srv_ = nh_private_.advertiseService(
       service_name, &VoxbloxGroundTruthPlugin::serviceCallback, this);
 }
 
 bool VoxbloxGroundTruthPlugin::serviceCallback(
-    std_srvs::Empty::Request &request, std_srvs::Empty::Response &response) {
+    voxblox_msgs::FilePath::Request &request,
+    voxblox_msgs::FilePath::Response &response) {
   common::MeshManager *mesh_manager = common::MeshManager::Instance();
   CHECK_NOTNULL(mesh_manager);
   // Instantiate an SDF creator
   voxblox::TsdfMap::Config map_config;
-  map_config.tsdf_voxel_size = 0.2;
+  map_config.tsdf_voxel_size = voxel_size_;
   voxblox_ground_truth::SdfCreator sdf_creator(map_config);
 
   // Iterate over all collision geometries
@@ -114,16 +122,19 @@ bool VoxbloxGroundTruthPlugin::serviceCallback(
                   submesh.SetVertex(vertex_i, new_vertex);
                 }
 
+                // Integrate the mesh faces (triangles) into the SDF
                 unsigned int num_faces = submesh.GetIndexCount() / 3;
                 LOG(INFO) << "Integrating " << num_faces << " faces";
                 for (unsigned int triangle_i = 0; triangle_i < num_faces;
                      triangle_i++) {
+                  // Get the indices of the vertices
                   const unsigned int index_a = submesh.GetIndex(triangle_i * 3);
                   const unsigned int index_b =
                       submesh.GetIndex(triangle_i * 3 + 1);
                   const unsigned int index_c =
                       submesh.GetIndex(triangle_i * 3 + 2);
 
+                  // Get the coordinates of the vertices
                   TriangularFaceVertexCoordinates triangle_vertices;
                   triangle_vertices.vertex_a = {
                       static_cast<float>(submesh.Vertex(index_a).X()),
@@ -138,8 +149,8 @@ bool VoxbloxGroundTruthPlugin::serviceCallback(
                       static_cast<float>(submesh.Vertex(index_c).Y()),
                       static_cast<float>(submesh.Vertex(index_c).Z())};
 
-                  sdf_creator.integrateTriangle(
-                      TriangularFaceVertexCoordinates());
+                  // Integrate the triangle into the mesh
+                  sdf_creator.integrateTriangle(triangle_vertices);
                 }
               } else {
                 LOG(WARNING) << "Could not get pointer to mesh '" << mesh_name
@@ -180,7 +191,10 @@ bool VoxbloxGroundTruthPlugin::serviceCallback(
         sdf_creator.getIntersectionLayer());
   }
 
+  // Save the TSDF to a file
+  LOG(INFO) << "Saving TSDF to file: " << request.file_path;
+  sdf_creator.getTsdfMap().getTsdfLayer().saveToFile(request.file_path, true);
+
   return true;
 }
-
 }  // namespace gazebo
