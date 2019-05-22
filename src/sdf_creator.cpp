@@ -45,6 +45,7 @@ void SdfCreator::integrateTriangle(
 
   // Iterate over all voxels within the triangle's padded AABB
   LongIndexElement x, y, z;
+  Point voxel_origin;
   for (z = voxel_index_min[2]; z < voxel_index_max[2]; z++) {
     for (y = voxel_index_min[1]; y < voxel_index_max[1]; y++) {
       for (x = voxel_index_min[0]; x < voxel_index_max[0]; x++) {
@@ -63,7 +64,7 @@ void SdfCreator::integrateTriangle(
             block_ptr->getVoxelByVoxelIndex(local_voxel_index);
 
         // Compute distance to triangle
-        const Point voxel_origin =
+        voxel_origin =
             voxblox::getOriginPointFromGridIndex(voxel_index, voxel_size_);
         float distance = triangle_geometer.getDistanceToPoint(voxel_origin);
 
@@ -81,12 +82,11 @@ void SdfCreator::integrateTriangle(
       //       and goes through voxel origin collides with the triangle.
       //       If it does, we increase the intersection counter for the voxel
       //       containing the intersection.
-      Point2D ray;
-      ray << y, z;
+      const Point2D ray(voxel_origin.y(), voxel_origin.z());
       Point barycentric_coordinates;
-      bool point_in_triangle_2d =
+      bool ray_intersects_triangle =
           triangle_geometer.getRayIntersection(ray, &barycentric_coordinates);
-      if (point_in_triangle_2d) {
+      if (ray_intersects_triangle) {
         // Get the voxel x index at the intersection
         float intersection_x_coordinate =
             barycentric_coordinates[0] * vertex_coordinates.vertex_a[0] +
