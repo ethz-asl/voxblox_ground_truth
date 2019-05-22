@@ -30,17 +30,47 @@ int main(int argc, char *argv[]) {
   voxblox_ground_truth::SdfVisualizer sdf_visualizer(nh_private);
 
   /* Process the command line arguments */
+  if (argc != 11) {
+    const std::string executable_path(argv[0]);
+    const std::string executable_filename =
+        executable_path.substr(executable_path.find_last_of('/') + 1);
+    std::cout << "Usage:\n"
+              << "./" << executable_filename << "  "
+              << "[ply_file_path] [voxel_size] [scale_factor] "
+                 "[X] [Y] [Z] [Qx] [Qy] [Qz] [Qw]"
+              << std::endl;
+    return -1;
+  }
   std::string ply_filepath(argv[1]);
-  std::stringstream voxel_size_raw(argv[2]);
   float voxel_size;
-  voxel_size_raw >> voxel_size;
-
-  // TODO(victorr): Read the Transform from params as X Y Z Qx Qy Qz Qw
-  // Transform the .ply into the right reference frame
-  double scale_factor = 100;
+  std::stringstream(argv[2]) >> voxel_size;
+  // Transformation and scaling from mesh to world frame
+  double scale_factor;
+  std::stringstream(argv[3]) >> scale_factor;
+  voxblox::FloatingPoint x, y, z;
+  std::stringstream(argv[4]) >> x;
+  std::stringstream(argv[5]) >> y;
+  std::stringstream(argv[6]) >> z;
+  voxblox::FloatingPoint qx, qy, qz, qw;
+  std::stringstream(argv[7]) >> qx;
+  std::stringstream(argv[8]) >> qy;
+  std::stringstream(argv[9]) >> qz;
+  std::stringstream(argv[10]) >> qw;
   voxblox::Transformation transform;
-  voxblox::Transformation::Vector3 scaled_axis_angle(3.14 / 2.0, 0, 0);
-  transform.getRotation() = voxblox::Rotation(scaled_axis_angle);
+  transform.getPosition() = voxblox::Transformation::Position(x, y, z);
+  transform.getRotation().setValues(qx, qy, qz, qw);
+  // NOTE: We don't check the quaternion's norm, since this is already done in
+  //       Rotation::setValues(...)
+
+  // Write the transformation params to cout for debugging
+  Eigen::IOFormat ioformat(Eigen::StreamPrecision, Eigen::DontAlignCols, "; ",
+                           "; ", "", "", "", "");
+  std::cout << "Will apply transformation:\n"
+            << "- scaling: " << scale_factor << "\n"
+            << "- translation: " << transform.getPosition().format(ioformat)
+            << "\n"
+            << "- rotation: "
+            << transform.getRotation().vector().format(ioformat) << "\n";
 
   /* Load the PLY file */
   pcl::PolygonMesh mesh;
@@ -88,9 +118,9 @@ int main(int argc, char *argv[]) {
 
     // Transform the vertices from mesh frame into world frame
     TriangularFaceVertexCoordinates triangle_vertices;
-    triangle_vertices.vertex_a = scale_factor * (transform * vertex_a);
-    triangle_vertices.vertex_b = scale_factor * (transform * vertex_b);
-    triangle_vertices.vertex_c = scale_factor * (transform * vertex_c);
+    triangle_vertices.vertex_a = transform * (scale_factor * vertex_a);
+    triangle_vertices.vertex_b = transform * (scale_factor * vertex_b);
+    triangle_vertices.vertex_c = transform * (scale_factor * vertex_c);
 
     // Update the SDF with the new triangle
     sdf_creator.integrateTriangle(triangle_vertices);

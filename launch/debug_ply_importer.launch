@@ -1,9 +1,16 @@
 <launch>
-  <node pkg="rviz" type="rviz" name="$(anon rviz)" respawn="false" output="screen"/>
-  <node name="ply_to_sdf" pkg="voxblox_ground_truth" type="ply_to_sdf"
-        output="screen" args="/home/victor/Downloads/bunny/reconstruction/bun_zipper.ply 0.1" />
-<!--  <node name="ply_to_sdf" pkg="voxblox_ground_truth" type="ply_to_sdf"-->
-<!--        output="screen" args="/home/victor/Downloads/dragon_recon/dragon_vrip.ply 0.1" />-->
-<!--  <node name="ply_to_sdf" pkg="voxblox_ground_truth" type="ply_to_sdf"-->
-<!--        output="screen" args="/home/victor/Downloads/xyzrgb_statuette.ply 0.2" />-->
+<!--  <arg name="ply_file_path" default="/home/victor/Downloads/bunny/reconstruction/bun_zipper.ply"/>-->
+  <arg name="ply_file_path" value="/home/victor/Downloads/dragon_recon/dragon_vrip.ply"/>
+<!--  <arg name="ply_file_path" value="/home/victor/Downloads/xyzrgb_statuette.ply"/>-->
+
+  <arg name="voxel_size" default="0.1" />
+  <arg name="scale" default="100" />
+  <arg name="translation" default="0 0 -3" />
+  <arg name="rotation" default="0 0 0.7071068 0.7071068" />
+
+  <node name="ply_to_sdf" pkg="voxblox_ground_truth" type="ply_to_sdf" output="screen"
+        args="$(arg ply_file_path) $(arg voxel_size) $(arg scale) $(arg translation) $(arg rotation)"/>
+
+  <arg name="rviz_file" default="$(find voxblox_ground_truth)/config/debug.rviz" />
+  <node pkg="rviz" type="rviz" name="$(anon rviz)" respawn="false" args="-d $(arg rviz_file)" output="screen"/>
 </launch>
