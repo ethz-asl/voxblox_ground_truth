@@ -179,7 +179,7 @@ bool VoxbloxGroundTruthPlugin::serviceCallback(
   }
 
   // Visualize the TSDF and intersection count layers
-  bool publish_debug_visuals = false;
+  bool publish_debug_visuals = true;
   nh_private_.param("publish_visuals", publish_debug_visuals,
                     publish_debug_visuals);
   if (publish_debug_visuals) {

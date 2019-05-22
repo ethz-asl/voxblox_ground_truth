@@ -18,7 +18,6 @@ cs_add_executable(ply_to_sdf
     src/user_interfaces/ply_to_sdf_script.cpp
     src/sdf_creator.cpp
     src/sdf_visualizer.cpp
-    src/io/tinyply.cpp
     src/triangle_geometer.cpp)
 
 #################
