@@ -7,9 +7,6 @@ GZ_REGISTER_WORLD_PLUGIN(VoxbloxGroundTruthPlugin)
 
 VoxbloxGroundTruthPlugin::VoxbloxGroundTruthPlugin()
     : WorldPlugin(), nh_private_("~"), sdf_visualizer_(&nh_private_) {
-  // Read the voxel size from ROS params
-  CHECK(nh_private_.getParam("/voxblox_ground_truth/voxel_size", voxel_size_))
-      << "ROS param /voxblox_ground_truth/voxel_size must be set.";
 }
 
 void VoxbloxGroundTruthPlugin::Load(physics::WorldPtr world,
@@ -26,9 +23,15 @@ void VoxbloxGroundTruthPlugin::Load(physics::WorldPtr world,
 bool VoxbloxGroundTruthPlugin::serviceCallback(
     voxblox_msgs::FilePath::Request &request,
     voxblox_msgs::FilePath::Response &response) {
+  // Read the voxel size from ROS params
+  CHECK(nh_private_.getParam("/voxblox_ground_truth/voxel_size", voxel_size_))
+      << "ROS param /voxblox_ground_truth/voxel_size must be set.";
+
+  // Instantiate a Gazebo mesh manager
   common::MeshManager *mesh_manager = common::MeshManager::Instance();
   CHECK_NOTNULL(mesh_manager);
-  // Instantiate an SDF creator
+
+  // Instantiate the ground truth SDF creator
   voxblox::TsdfMap::Config map_config;
   map_config.tsdf_voxel_size = voxel_size_;
   voxblox_ground_truth::SdfCreator sdf_creator(map_config);
