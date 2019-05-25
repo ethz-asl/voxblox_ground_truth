@@ -1,7 +1,3 @@
-//
-// Created by victor on 04.03.19.
-//
-
 #include "voxblox_ground_truth/triangle_geometer.h"
 
 namespace voxblox_ground_truth {

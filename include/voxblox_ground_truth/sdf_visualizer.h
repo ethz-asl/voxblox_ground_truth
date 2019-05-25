@@ -1,9 +1,5 @@
-//
-// Created by victor on 21.05.19.
-//
-
-#ifndef VOXBLOX_GROUND_TRUTH_SDF_VISUALIZER_H
-#define VOXBLOX_GROUND_TRUTH_SDF_VISUALIZER_H
+#ifndef VOXBLOX_GROUND_TRUTH_SDF_VISUALIZER_H_
+#define VOXBLOX_GROUND_TRUTH_SDF_VISUALIZER_H_
 
 #include <ros/ros.h>
 #include <voxblox_ros/ptcloud_vis.h>
@@ -12,7 +8,7 @@
 namespace voxblox_ground_truth {
 class SdfVisualizer {
  public:
-  explicit SdfVisualizer(ros::NodeHandle &nh_private);
+  explicit SdfVisualizer(ros::NodeHandle *nh_private);
 
   void publishIntersectionVisuals(
       const voxblox::Layer<IntersectionVoxel> &intersection_layer);
@@ -28,4 +24,4 @@ class SdfVisualizer {
 };
 }  // namespace voxblox_ground_truth
 
-#endif //VOXBLOX_GROUND_TRUTH_SDF_VISUALIZER_H
+#endif  // VOXBLOX_GROUND_TRUTH_SDF_VISUALIZER_H_

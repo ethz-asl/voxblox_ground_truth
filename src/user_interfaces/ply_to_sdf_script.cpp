@@ -1,7 +1,3 @@
-//
-// Created by victor on 13.02.19.
-//
-
 #include <pcl/io/ply_io.h>
 #include <cstring>
 #include <fstream>
@@ -24,7 +20,7 @@ int main(int argc, char *argv[]) {
   ros::init(argc, argv, "voxblox_ground_truth");
   ros::NodeHandle nh_private("~");
   // Advertise the topics to visualize the SDF map in Rviz
-  voxblox_ground_truth::SdfVisualizer sdf_visualizer(nh_private);
+  voxblox_ground_truth::SdfVisualizer sdf_visualizer(&nh_private);
 
   /* Process the command line arguments */
   if (argc != 12) {

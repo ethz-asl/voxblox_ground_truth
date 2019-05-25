@@ -1,7 +1,3 @@
-//
-// Created by victor on 04.03.19.
-//
-
 #ifndef VOXBLOX_GROUND_TRUTH_SDF_CREATOR_H_
 #define VOXBLOX_GROUND_TRUTH_SDF_CREATOR_H_
 
