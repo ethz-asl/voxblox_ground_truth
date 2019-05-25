@@ -1,21 +1,19 @@
-//
-// Created by victor on 21.05.19.
-//
-
 #include "voxblox_ground_truth/sdf_visualizer.h"
 
 namespace voxblox_ground_truth {
-SdfVisualizer::SdfVisualizer(ros::NodeHandle &nh_private) {
+SdfVisualizer::SdfVisualizer(ros::NodeHandle *nh_private) {
+  CHECK_NOTNULL(nh_private);
+
   // Advertise the topics to visualize the SDF map in Rviz
-  tsdf_map_pub_ = nh_private.advertise<pcl::PointCloud<pcl::PointXYZI>>(
+  tsdf_map_pub_ = nh_private->advertise<pcl::PointCloud<pcl::PointXYZI>>(
       "tsdf_map", 1, true);
   tsdf_map_surface_pub_ =
-      nh_private.advertise<pcl::PointCloud<pcl::PointXYZI>>("tsdf_map_surface",
-                                                            1, true);
-  tsdf_slice_pub_ = nh_private.advertise<pcl::PointCloud<pcl::PointXYZI>>(
+      nh_private->advertise<pcl::PointCloud<pcl::PointXYZI>>("tsdf_map_surface",
+                                                             1, true);
+  tsdf_slice_pub_ = nh_private->advertise<pcl::PointCloud<pcl::PointXYZI>>(
       "tsdf_slice", 1, true);
   intersection_count_pub_ =
-      nh_private.advertise<pcl::PointCloud<pcl::PointXYZI>>(
+      nh_private->advertise<pcl::PointCloud<pcl::PointXYZI>>(
           "intersection_counts", 1, true);
 }
 

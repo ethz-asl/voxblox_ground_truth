@@ -1,7 +1,3 @@
-//
-// Created by victor on 04.03.19.
-//
-
 #include <limits>
 #include <ros/ros.h>
 #include "voxblox_ground_truth/sdf_creator.h"

@@ -1,7 +1,3 @@
-//
-// Created by victor on 27.02.19.
-//
-
 #include "voxblox_ground_truth/user_interfaces/gazebo_plugin.h"
 #include <string>
 #include "voxblox_ground_truth/sdf_creator.h"
@@ -10,7 +6,7 @@ namespace gazebo {
 GZ_REGISTER_WORLD_PLUGIN(VoxbloxGroundTruthPlugin)
 
 VoxbloxGroundTruthPlugin::VoxbloxGroundTruthPlugin()
-    : WorldPlugin(), nh_private_("~"), sdf_visualizer_(nh_private_) {
+    : WorldPlugin(), nh_private_("~"), sdf_visualizer_(&nh_private_) {
   // Read the voxel size from ROS params
   CHECK(nh_private_.getParam("/voxblox_ground_truth/voxel_size", voxel_size_))
       << "ROS param /voxblox_ground_truth/voxel_size must be set.";
