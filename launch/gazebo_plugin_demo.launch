@@ -7,16 +7,12 @@
 
   <!-- Launch Gazebo world -->
   <group>
-    <!-- Add rotors_gazebo models and resources to gazebo path -->
-    <env name="GAZEBO_MODEL_PATH" value="${GAZEBO_MODEL_PATH}:$(find rotors_gazebo)/models"/>
-    <env name="GAZEBO_RESOURCE_PATH" value="${GAZEBO_RESOURCE_PATH}:$(find rotors_gazebo)/models"/>
-
-    <!-- Add firefighting_arena models and resources to gazebo path -->
-    <env name="GAZEBO_MODEL_PATH" value="${GAZEBO_MODEL_PATH}:$(find firefighting_simulation_arena)/models"/>
-    <env name="GAZEBO_RESOURCE_PATH" value="${GAZEBO_RESOURCE_PATH}:$(find firefighting_simulation_arena)/models"/>
+    <!-- Add the sample_data/gazebo models and resources to gazebo path -->
+    <env name="GAZEBO_MODEL_PATH" value="${GAZEBO_MODEL_PATH}:$(find voxblox_ground_truth)/sample_data/gazebo/models"/>
+    <env name="GAZEBO_RESOURCE_PATH" value="${GAZEBO_RESOURCE_PATH}:$(find voxblox_ground_truth)/sample_data/gazebo/models"/>
 
     <include file="$(find gazebo_ros)/launch/empty_world.launch">
-      <arg name="world_name" value="$(find firefighting_simulation_arena)/worlds/burning_building_rubble.world"/>
+      <arg name="world_name" value="$(find voxblox_ground_truth)/sample_data/gazebo/worlds/burning_building_rubble.world"/>
       <!--<arg name="debug" value="true"/>-->
       <!--<arg name="paused" value="true"/>-->
     </include>

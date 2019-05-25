@@ -17,5 +17,6 @@
   <depend>voxblox_ros</depend>
   <depend>voxblox_msgs</depend>
   <depend>gazebo</depend>
+  <depend>gazebo_ros</depend>
 
 </package>
