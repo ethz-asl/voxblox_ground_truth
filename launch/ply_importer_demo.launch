@@ -1,5 +1,5 @@
 <launch>
-  <arg name="ply_input_file_path" default="$(find voxblox_ground_truth)/sample_data/bun_zipper.ply"/>
+  <arg name="ply_input_file_path" default="$(find voxblox_ground_truth)/sample_data/ply/bun_zipper.ply"/>
   <arg name="tsdf_output_file_path" default="$(env HOME)/bun_zipper.tsdf"/>
 
   <arg name="voxel_size" default="0.1" />
