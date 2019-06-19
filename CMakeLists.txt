@@ -3,6 +3,22 @@ project(voxblox_ground_truth)
 
 add_definitions(-std=c++11)
 
+############
+# PROTOBUF #
+############
+# General idea: first check if we have protobuf catkin, then use that.
+# Otherwise use system protobuf.
+set(PROTO_LIBRARIES "")
+find_package(protobuf_catkin QUIET)
+if (protobuf_catkin_FOUND)
+  message(STATUS "Using protobuf_catkin")
+  set(PROTO_LIBRARIES ${protobuf_catkin_LIBRARIES})
+else()
+  message(STATUS "Using system protobuf")
+  find_package(Protobuf REQUIRED)
+  set(PROTO_LIBRARIES ${PROTOBUF_LIBRARIES})
+endif()
+
 find_package(catkin_simple REQUIRED)
 catkin_simple(ALL_DEPS_REQUIRED)
 
@@ -14,6 +30,7 @@ cs_add_executable(ply_to_sdf
     src/sdf_creator.cpp
     src/sdf_visualizer.cpp
     src/triangle_geometer.cpp)
+target_link_libraries(ply_to_sdf ${PROTO_LIBRARIES})
 
 #################
 # GAZEBO PLUGIN #
