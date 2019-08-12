@@ -86,8 +86,6 @@ bool VoxbloxGroundTruthPlugin::serviceCallback(
           // physics::Base::MESH_SHAPE through MeshManager::Load(file_name)
 
           mesh_name = geometry_msg.mesh().filename();
-          LOG(INFO) << "URI: " << mesh_name;
-
           mesh_ptr = mesh_manager->Load(mesh_name);
         } else {
           mesh_name = "unit_" + geometry_type_str;
@@ -95,9 +93,33 @@ bool VoxbloxGroundTruthPlugin::serviceCallback(
         }
 
         if (!mesh_ptr) {
-          LOG(WARNING) << "Could not get pointer to mesh '" << mesh_name
-                       << "'";
-          return false;
+          LOG(WARNING) << "Could not get pointer to mesh '" << mesh_name << "'";
+
+          if (geometry_type_str != "mesh") {
+            return false;
+          }
+
+          // try different objects
+          size_t idx = mesh_name.find(".obj");
+          if (idx != std::string::npos) {
+            mesh_name = mesh_name.replace(idx, std::string::npos, ".mtl");
+            mesh_ptr = mesh_manager->GetMesh(mesh_name);
+          }
+
+          if (!mesh_ptr) {
+            LOG(WARNING) << "Could not get pointer to mesh '" << mesh_name << "'";
+
+            idx = mesh_name.find(".mtl");
+            if (idx != std::string::npos) {
+              mesh_name = mesh_name.replace(idx, std::string::npos, ".dae");
+              mesh_ptr = mesh_manager->GetMesh(mesh_name);
+            }
+            if (!mesh_ptr) {
+              LOG(WARNING) << "Could not get pointer to mesh '" << mesh_name << "'";
+              LOG(WARNING) << "Skipping this mesh";
+              continue;
+            }
+          }
         }
 
         for (uint submesh_id = 0; submesh_id < mesh_ptr->GetSubMeshCount(); submesh_id++) {
