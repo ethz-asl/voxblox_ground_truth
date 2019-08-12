@@ -135,7 +135,7 @@ bool VoxbloxGroundTruthPlugin::serviceCallback(
           } else if (geometry_type_str == "mesh") {
             // TODO(gasserl): untested
             // NOTE: The shape scale is absolute w.r.t. the world
-            geometry_size = collision->GetShape()->GetScale().Ign();
+            geometry_size = collision->GetShape()->Scale();
             LOG(INFO) << "Scale: shape_scale " << geometry_size;
           } else {
             LOG(ERROR) << "Could not get geometry size of " << geometry_type_str;
@@ -144,7 +144,7 @@ bool VoxbloxGroundTruthPlugin::serviceCallback(
 
           // Scale the mesh and transform it into world frame
           const ignition::math::Pose3d transform =
-              collision->WorldPose().Ign();
+              collision->WorldPose();
           for (unsigned int vertex_i = 0;
                vertex_i < submesh.GetVertexCount(); vertex_i++) {
             // Create a copy of the vertex s.t. it can be manipulated
