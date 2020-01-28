@@ -1,5 +1,7 @@
-#include <limits>
 #include <ros/ros.h>
+#include <voxblox/utils/neighbor_tools.h>
+#include <limits>
+
 #include "voxblox_ground_truth/sdf_creator.h"
 #include "voxblox_ground_truth/triangle_geometer.h"
 
@@ -14,7 +16,8 @@ SdfCreator::SdfCreator(voxblox::TsdfMap::Config map_config)
           1.0f / static_cast<FloatingPoint>(map_config.tsdf_voxels_per_side)),
       intersection_layer_(map_config.tsdf_voxel_size,
                           map_config.tsdf_voxels_per_side),
-      signs_up_to_date_(false) {}
+      signs_up_to_date_(false),
+      fill_inside_(true) {}
 
 void SdfCreator::integrateTriangle(
     const TriangularFaceVertexCoordinates &vertex_coordinates) {
@@ -67,7 +70,8 @@ void SdfCreator::integrateTriangle(
         // Update voxel if new distance is lower or if it is new
         // TODO(victorr): Take the absolute distance, to account for signs that
         //                might already have been computed
-        if (distance < voxel.distance || voxel.weight == 0.0f) {
+        if (std::abs(distance) < std::abs(voxel.distance) ||
+            voxel.weight == 0.0f) {
           voxel.distance = distance;
           voxel.weight += 1;
         }
@@ -110,13 +114,11 @@ void SdfCreator::integrateTriangle(
   }
 }
 
-void SdfCreator::updateSigns() {
-  LOG(INFO) << "Computing the signs...";
-
-  // Get the TSDF AABB, expressed in voxel index units
-  GlobalIndex global_voxel_index_min =
+void SdfCreator::getAABBIndices(GlobalIndex *global_voxel_index_min,
+                                GlobalIndex *global_voxel_index_max) const {
+  *global_voxel_index_min =
       GlobalIndex::Constant(std::numeric_limits<LongIndexElement>::max());
-  GlobalIndex global_voxel_index_max =
+  *global_voxel_index_max =
       GlobalIndex::Constant(std::numeric_limits<LongIndexElement>::min());
 
   // Indices of each block's local axis aligned min and max corners
@@ -135,18 +137,26 @@ void SdfCreator::updateSigns() {
         voxblox::getGlobalVoxelIndexFromBlockAndVoxelIndex(
             block_index, local_voxel_index_max, voxels_per_side_);
 
-    global_voxel_index_min =
-        global_voxel_index_min.cwiseMin(global_voxel_index_in_block_min);
-    global_voxel_index_max =
-        global_voxel_index_max.cwiseMax(global_voxel_index_in_block_max);
+    *global_voxel_index_min =
+        global_voxel_index_min->cwiseMin(global_voxel_index_in_block_min);
+    *global_voxel_index_max =
+        global_voxel_index_max->cwiseMax(global_voxel_index_in_block_max);
   }
+}
+
+void SdfCreator::updateSigns() {
+  LOG(INFO) << "Computing the signs...";
+  // Get the TSDF AABB, expressed in voxel index units
+  GlobalIndex global_voxel_index_min, global_voxel_index_max;
+  getAABBIndices(&global_voxel_index_min, &global_voxel_index_max);
 
   // Iterate over all voxels within the TSDF's AABB
   LongIndexElement x, y, z;
-  for (z = global_voxel_index_min[2]; z < global_voxel_index_max[2]; z++) {
-    for (y = global_voxel_index_min[1]; y < global_voxel_index_max[1]; y++) {
+  for (z = global_voxel_index_min.z(); z < global_voxel_index_max.z(); z++) {
+    for (y = global_voxel_index_min.y(); y < global_voxel_index_max.y(); y++) {
       size_t intersection_count = 0;
-      for (x = global_voxel_index_min[0]; x < global_voxel_index_max[0]; x++) {
+      for (x = global_voxel_index_min.x(); x < global_voxel_index_max.x();
+           x++) {
         // Exit if CTRL+C was pressed
         if (!ros::ok()) {
           std::cout << "\nShutting down..." << std::endl;
@@ -162,15 +172,13 @@ void SdfCreator::updateSigns() {
           intersection_count += intersection_voxel->count;
         }
 
-        // TODO(victorr): Set the + or - sign instead of flipping it,
-        //                such that it's possible to recompute the sign
-        if (intersection_count % 2 == 1) {
+        if (intersection_count % 2 == fill_inside_) {
           // We're inside the surface
           voxblox::TsdfVoxel *tsdf_voxel =
               tsdf_map_.getTsdfLayerPtr()->getVoxelPtrByGlobalIndex(
                   global_voxel_index);
           if (tsdf_voxel) {
-            tsdf_voxel->distance = -tsdf_voxel->distance;
+            tsdf_voxel->distance = -std::abs(tsdf_voxel->distance);
           }
         }
       }
@@ -189,6 +197,59 @@ const voxblox::TsdfMap &SdfCreator::getTsdfMap() {
   }
 
   return tsdf_map_;
+}
+
+void SdfCreator::floodfillUnoccupied(FloatingPoint distance_value) {
+  // Get the TSDF AABB, expressed in voxel index units
+  GlobalIndex global_voxel_index_min, global_voxel_index_max;
+  getAABBIndices(&global_voxel_index_min, &global_voxel_index_max);
+
+  // We're then going to iterate over all of the voxels within the AABB.
+  // For any voxel which is unobserved and has free neighbors, mark it as free.
+  // This assumes a watertight mesh (which is what's required for this algorithm
+  // anyway).
+  LongIndexElement x, y, z;
+  // Iterate over x, y, z to minimize cache misses.
+  for (x = global_voxel_index_min.x(); x < global_voxel_index_max.x(); x++) {
+    for (y = global_voxel_index_min.y(); y < global_voxel_index_max.y(); y++) {
+      for (z = global_voxel_index_min.z(); z < global_voxel_index_max.z();
+           z++) {
+        // Exit if CTRL+C was pressed
+        if (!ros::ok()) {
+          std::cout << "\nShutting down..." << std::endl;
+          return;
+        }
+
+        GlobalIndex global_voxel_index(x, y, z);
+        voxblox::TsdfVoxel *tsdf_voxel =
+            tsdf_map_.getTsdfLayerPtr()->getVoxelPtrByGlobalIndex(
+                global_voxel_index);
+
+        // If this is unobserved, then we need to check its neighbors.
+        if (tsdf_voxel != nullptr && tsdf_voxel->weight <= 0.0f) {
+          voxblox::GlobalIndexVector neighbors;
+          voxblox::Neighborhood<>::IndexMatrix neighbor_indices;
+          voxblox::Neighborhood<>::getFromGlobalIndex(global_voxel_index,
+                                                      &neighbor_indices);
+          for (unsigned int idx = 0u; idx < neighbor_indices.cols(); ++idx) {
+            const GlobalIndex &neighbor_index = neighbor_indices.col(idx);
+            voxblox::TsdfVoxel *neighbor_voxel =
+                tsdf_map_.getTsdfLayerPtr()->getVoxelPtrByGlobalIndex(
+                    neighbor_index);
+            // One free neighbor is enough to mark this voxel as free.
+            if (neighbor_voxel != nullptr && neighbor_voxel->weight > 0.0f &&
+                neighbor_voxel->distance > 0.0f) {
+              tsdf_voxel->distance = distance_value;
+              tsdf_voxel->weight = 1.0f;
+              break;
+            }
+          }
+        }
+        // Otherwise just move on, we're not modifying anything that's already
+        // been updated.
+      }
+    }
+  }
 }
 
 }  // namespace voxblox_ground_truth

@@ -1,0 +1,18 @@
+<launch>
+  <arg name="ply_input_file_path" default="$(env HOME)/sraas/Eloleyni_Talstrasse1/mesh_watertight.ply"/>
+  <arg name="tsdf_output_file_path" default="$(env HOME)/sraas/voxblox1.tsdf"/>
+
+  <arg name="voxel_size" default="0.1" />
+  <arg name="scale" default="1" />
+  <arg name="translation" default="0 0 0.0" />
+  <arg name="rotation" default="0 0 0.7071068 0.7071068" />
+
+  <node name="ply_to_sdf" pkg="voxblox_ground_truth" type="ply_to_sdf" output="screen"
+        args="$(arg ply_input_file_path) $(arg tsdf_output_file_path) $(arg voxel_size) $(arg scale) $(arg translation) $(arg rotation)">
+    <param name="fill_inside" value="false" />
+    <param name="floodfill_unoccupied" value="true" />
+  </node>
+
+  <arg name="rviz_file" default="$(find voxblox_ground_truth)/config/debug_ply_importer.rviz" />
+  <node pkg="rviz" type="rviz" name="$(anon rviz)" respawn="false" args="-d $(arg rviz_file)" output="screen"/>
+</launch>

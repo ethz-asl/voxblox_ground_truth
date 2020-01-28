@@ -13,7 +13,8 @@
 #include <ros/ros.h>
 #include "voxblox_ground_truth/sdf_visualizer.h"
 
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[])
+{
   using PointcloudMsg = pcl::PointCloud<pcl::PointXYZI>;
   /* Advertise the debugging ROS topic */
   // Register with ROS
@@ -23,7 +24,8 @@ int main(int argc, char *argv[]) {
   voxblox_ground_truth::SdfVisualizer sdf_visualizer(&nh_private);
 
   /* Process the command line arguments */
-  if (argc != 12) {
+  if (argc != 12)
+  {
     const std::string executable_path(argv[0]);
     const std::string executable_filename =
         executable_path.substr(executable_path.find_last_of('/') + 1);
@@ -57,13 +59,12 @@ int main(int argc, char *argv[]) {
   //       Rotation::setValues(...)
 
   // Write the transformation params to cout for debugging
-  Eigen::IOFormat ioformat(Eigen::StreamPrecision, Eigen::DontAlignCols, "; ",
-                           "; ", "", "", "", "");
-  ROS_INFO_STREAM(
-      "Will apply transformation:\n"
-      << "- scaling: " << scale_factor << "\n"
-      << "- translation: " << transform.getPosition().format(ioformat) << "\n"
-      << "- rotation: " << transform.getRotation().vector().format(ioformat));
+  Eigen::IOFormat ioformat(Eigen::StreamPrecision, Eigen::DontAlignCols, "; ", "; ", "", "", "",
+                           "");
+  ROS_INFO_STREAM("Will apply transformation:\n"
+                  << "- scaling: " << scale_factor << "\n"
+                  << "- translation: " << transform.getPosition().format(ioformat) << "\n"
+                  << "- rotation: " << transform.getRotation().vector().format(ioformat));
 
   /* Load the PLY file */
   pcl::PolygonMesh mesh;
@@ -78,17 +79,24 @@ int main(int argc, char *argv[]) {
   map_config.tsdf_voxel_size = voxel_size;
   voxblox_ground_truth::SdfCreator sdf_creator(map_config);
 
+  // Get parameters for whether inside the mesh is free or occupied.
+  bool fill_inside = sdf_creator.getFillInside();
+  nh_private.param("fill_inside", fill_inside, fill_inside);
+  sdf_creator.setFillInside(fill_inside);
+
   // Iterate over all triangles
   size_t triangle_i = 0;
   size_t num_triangles = mesh.polygons.size();
-  for (const pcl::Vertices &polygon : mesh.polygons) {
+  for (const pcl::Vertices &polygon : mesh.polygons)
+  {
     // Ensure that the polygon is a triangle (other meshes are not supported)
     CHECK_EQ(polygon.vertices.size(), 3);
 
     // Indicate progress
     triangle_i++;
     // Only print progress for each promile of completion, to reduce IO wait
-    if (triangle_i % (num_triangles / 1000) == 0) {
+    if (triangle_i % (num_triangles / 1000) == 0)
+    {
       printf("\rProgress: %3.1f%% - total nr of blocks %lu",
              triangle_i / static_cast<double>(num_triangles) * 100,
              sdf_creator.getNumberOfAllocatedBlocks());
@@ -96,18 +104,16 @@ int main(int argc, char *argv[]) {
     }
 
     // Exit if CTRL+C was pressed
-    if (!ros::ok()) {
+    if (!ros::ok())
+    {
       ROS_INFO("Shutting down...");
       return -1;
     }
 
     // Extract the triangle's vertices from the vertex coordinate pointcloud
-    const Point vertex_a =
-        vertex_coordinates[polygon.vertices[0]].getVector3fMap();
-    const Point vertex_b =
-        vertex_coordinates[polygon.vertices[1]].getVector3fMap();
-    const Point vertex_c =
-        vertex_coordinates[polygon.vertices[2]].getVector3fMap();
+    const Point vertex_a = vertex_coordinates[polygon.vertices[0]].getVector3fMap();
+    const Point vertex_b = vertex_coordinates[polygon.vertices[1]].getVector3fMap();
+    const Point vertex_c = vertex_coordinates[polygon.vertices[2]].getVector3fMap();
 
     // Transform the vertices from mesh frame into world frame
     TriangularFaceVertexCoordinates triangle_vertices;
@@ -120,22 +126,26 @@ int main(int argc, char *argv[]) {
   }
   ROS_INFO("Distance field building complete.");
 
+  // Optionally floodfill unoccupied space.
+  bool floodfill_unoccupied = false;
+  nh_private.param("floodfill_unoccupied", floodfill_unoccupied, floodfill_unoccupied);
+  if (floodfill_unoccupied) {
+    sdf_creator.floodfillUnoccupied(4 * voxel_size);
+  }
+
   /* Publish debugging visuals */
   bool publish_debug_visuals = true;
-  nh_private.param("publish_visuals", publish_debug_visuals,
-                   publish_debug_visuals);
-  if (publish_debug_visuals) {
+  nh_private.param("publish_visuals", publish_debug_visuals, publish_debug_visuals);
+  if (publish_debug_visuals)
+  {
     ROS_INFO("Publishing visuals");
-    sdf_visualizer.publishTsdfVisuals(
-        sdf_creator.getTsdfMap().getTsdfLayer());
-    sdf_visualizer.publishIntersectionVisuals(
-        sdf_creator.getIntersectionLayer());
+    sdf_visualizer.publishTsdfVisuals(sdf_creator.getTsdfMap().getTsdfLayer());
+    sdf_visualizer.publishIntersectionVisuals(sdf_creator.getIntersectionLayer());
   }
 
   // Save the TSDF to a file
   ROS_INFO_STREAM("Saving TSDF to file: " << tsdf_output_filepath);
-  sdf_creator.getTsdfMap().getTsdfLayer().saveToFile(tsdf_output_filepath,
-                                                     true);
+  sdf_creator.getTsdfMap().getTsdfLayer().saveToFile(tsdf_output_filepath, true);
 
   ROS_INFO("Done");
   ros::spin();

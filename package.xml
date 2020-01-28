@@ -18,5 +18,6 @@
   <depend>voxblox_msgs</depend>
   <depend>gazebo</depend>
   <depend>gazebo_ros</depend>
+  <depend>mmg_common_dependencies</depend>
 
 </package>
