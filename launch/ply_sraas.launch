@@ -11,6 +11,7 @@
         args="$(arg ply_input_file_path) $(arg tsdf_output_file_path) $(arg voxel_size) $(arg scale) $(arg translation) $(arg rotation)">
     <param name="fill_inside" value="false" />
     <param name="floodfill_unoccupied" value="true" />
+    <param name="tsdf_slice_height" value="0" />
   </node>
 
   <arg name="rviz_file" default="$(find voxblox_ground_truth)/config/debug_ply_importer.rviz" />

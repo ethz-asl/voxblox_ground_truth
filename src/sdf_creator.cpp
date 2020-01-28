@@ -224,6 +224,14 @@ void SdfCreator::floodfillUnoccupied(FloatingPoint distance_value) {
         voxblox::TsdfVoxel *tsdf_voxel =
             tsdf_map_.getTsdfLayerPtr()->getVoxelPtrByGlobalIndex(
                 global_voxel_index);
+        // If the block doesn't exist, make it.
+        if (tsdf_voxel == nullptr) {
+          BlockIndex block_index = voxblox::getBlockIndexFromGlobalVoxelIndex(
+              global_voxel_index, voxels_per_side_inv_);
+          tsdf_map_.getTsdfLayerPtr()->allocateBlockPtrByIndex(block_index);
+          tsdf_voxel = tsdf_map_.getTsdfLayerPtr()->getVoxelPtrByGlobalIndex(
+              global_voxel_index);
+        }
 
         // If this is unobserved, then we need to check its neighbors.
         if (tsdf_voxel != nullptr && tsdf_voxel->weight <= 0.0f) {
