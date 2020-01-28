@@ -36,7 +36,7 @@ target_link_libraries(ply_to_sdf ${PROTO_LIBRARIES})
 #################
 # GAZEBO PLUGIN #
 #################
-set(BUILD_GAZEBO_PLUGINS TRUE)
+set(BUILD_GAZEBO_PLUGINS FALSE)
 
 if (BUILD_GAZEBO_PLUGINS)
   include_directories(${GAZEBO_INCLUDE_DIRS})
