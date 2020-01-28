@@ -12,24 +12,16 @@ catkin_simple(ALL_DEPS_REQUIRED)
 ############
 # General idea: first check if we have protobuf catkin, then use that.
 # Otherwise use system protobuf.
-
-find_package(mmg_common_dependencies QUIET)
-
 set(PROTO_LIBRARIES "")
 find_package(protobuf_catkin QUIET)
 if (protobuf_catkin_FOUND)
   message(STATUS "Using protobuf_catkin")
   set(PROTO_LIBRARIES ${protobuf_catkin_LIBRARIES})
-elseif(mmg_common_dependencies_FOUND)
-  message(STATUS "Using MMG deps")
 else()
   message(STATUS "Using system protobuf")
   find_package(Protobuf REQUIRED)
   set(PROTO_LIBRARIES ${PROTOBUF_LIBRARIES})
 endif()
-
-
-
 
 ##############
 ## BINARIES ##
@@ -44,9 +36,13 @@ target_link_libraries(ply_to_sdf ${PROTO_LIBRARIES})
 #################
 # GAZEBO PLUGIN #
 #################
-#include_directories(${GAZEBO_INCLUDE_DIRS})
-#cs_add_library(voxblox_ground_truth_plugin SHARED
-#    src/user_interfaces/gazebo_plugin.cpp
-#    src/sdf_creator.cpp
-#    src/sdf_visualizer.cpp
-#    src/triangle_geometer.cpp)
+set(BUILD_GAZEBO_PLUGINS TRUE)
+
+if (BUILD_GAZEBO_PLUGINS)
+  include_directories(${GAZEBO_INCLUDE_DIRS})
+  cs_add_library(voxblox_ground_truth_plugin SHARED
+      src/user_interfaces/gazebo_plugin.cpp
+      src/sdf_creator.cpp
+      src/sdf_visualizer.cpp
+      src/triangle_geometer.cpp)
+endif ()
