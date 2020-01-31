@@ -23,6 +23,16 @@ else()
   set(PROTO_LIBRARIES ${PROTOBUF_LIBRARIES})
 endif()
 
+#############
+# LIBRARIES #
+#############
+cs_add_library(${PROJECT_NAME}
+  src/sdf_creator.cpp
+  src/triangle_geometer.cpp
+  src/sdf_visualizer.cpp
+)
+target_link_libraries(${PROJECT_NAME} ${PROTO_LIBRARIES})
+
 ##############
 ## BINARIES ##
 ##############
@@ -31,7 +41,7 @@ cs_add_executable(ply_to_sdf
     src/sdf_creator.cpp
     src/sdf_visualizer.cpp
     src/triangle_geometer.cpp)
-target_link_libraries(ply_to_sdf ${PROTO_LIBRARIES})
+target_link_libraries(ply_to_sdf ${PROJECT_NAME})
 
 #################
 # GAZEBO PLUGIN #
@@ -46,3 +56,9 @@ if (BUILD_GAZEBO_PLUGINS)
       src/sdf_visualizer.cpp
       src/triangle_geometer.cpp)
 endif ()
+
+##########
+# EXPORT #
+##########
+cs_install()
+cs_export()
