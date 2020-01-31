@@ -252,6 +252,15 @@ void SdfCreator::floodfillUnoccupied(FloatingPoint distance_value) {
               break;
             }
           }
+
+          // If this voxel is in the AABB but didn't get updated from a
+          // neighbor, assume it's outside the mesh and set the corresponding
+          // sign of distance value.
+          if (tsdf_voxel->weight <= 0.0f) {
+            tsdf_voxel->weight = 1.0f;
+            tsdf_voxel->distance =
+                fill_inside_ ? distance_value : -distance_value;
+          }
         }
         // Otherwise just move on, we're not modifying anything that's already
         // been updated.
