@@ -46,7 +46,7 @@ target_link_libraries(ply_to_sdf ${PROJECT_NAME})
 #################
 # GAZEBO PLUGIN #
 #################
-set(BUILD_GAZEBO_PLUGINS FALSE)
+set(BUILD_GAZEBO_PLUGINS TRUE)
 
 if (BUILD_GAZEBO_PLUGINS)
   include_directories(${GAZEBO_INCLUDE_DIRS})
