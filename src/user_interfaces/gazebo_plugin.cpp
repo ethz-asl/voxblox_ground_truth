@@ -37,7 +37,11 @@ bool VoxbloxGroundTruthPlugin::serviceCallback(
   voxblox_ground_truth::SdfCreator sdf_creator(map_config);
 
   // Iterate over all collision geometries
+# if GAZEBO_MAJOR_VERSION > 8
+  for (const physics::ModelPtr &model : world_->Models()) {
+# else
   for (const physics::ModelPtr &model : world_->GetModels()) {
+#endif
     for (const physics::LinkPtr &link : model->GetLinks()) {
       for (const physics::CollisionPtr &collision : link->GetCollisions()) {
         LOG(INFO) << "Processing '" << collision->GetScopedName(true) << "'";
@@ -104,8 +108,13 @@ bool VoxbloxGroundTruthPlugin::serviceCallback(
                 }
 
                 // Scale the mesh and transform it into world frame
+# if GAZEBO_MAJOR_VERSION > 8
+                const ignition::math::Pose3d transform =
+                    collision->WorldPose();
+# else
                 const ignition::math::Pose3d transform =
                     collision->GetWorldPose().Ign();
+# endif
                 for (unsigned int vertex_i = 0;
                      vertex_i < submesh.GetVertexCount(); vertex_i++) {
                   // Create a copy of the vertex s.t. it can be manipulated
