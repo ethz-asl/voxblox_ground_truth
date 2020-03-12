@@ -1,8 +1,11 @@
 #include "voxblox_ground_truth/sdf_visualizer.h"
 
 namespace voxblox_ground_truth {
-SdfVisualizer::SdfVisualizer(ros::NodeHandle *nh_private) {
+SdfVisualizer::SdfVisualizer(ros::NodeHandle *nh_private) : tsdf_slice_height_(0.0) {
   CHECK_NOTNULL(nh_private);
+
+  // Get parameters.
+  nh_private->param("tsdf_slice_height", tsdf_slice_height_, tsdf_slice_height_);
 
   // Advertise the topics to visualize the SDF map in Rviz
   tsdf_map_pub_ = nh_private->advertise<pcl::PointCloud<pcl::PointXYZI>>(
@@ -46,7 +49,8 @@ void voxblox_ground_truth::SdfVisualizer::publishTsdfVisuals(
   LOG(INFO) << "Publishing TSDF slice";
   pcl::PointCloud<pcl::PointXYZI> tsdf_slice_ptcloud_msg;
   tsdf_slice_ptcloud_msg.header.frame_id = "world";
-  voxblox::createDistancePointcloudFromTsdfLayerSlice(tsdf_layer, 2, 4,
+  voxblox::createDistancePointcloudFromTsdfLayerSlice(tsdf_layer,
+                                                      2, tsdf_slice_height_,
                                                       &tsdf_slice_ptcloud_msg);
   tsdf_slice_pub_.publish(tsdf_slice_ptcloud_msg);
 }

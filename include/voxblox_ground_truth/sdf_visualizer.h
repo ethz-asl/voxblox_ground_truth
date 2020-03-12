@@ -21,6 +21,8 @@ class SdfVisualizer {
   ros::Publisher tsdf_map_surface_pub_;
   ros::Publisher tsdf_slice_pub_;
   ros::Publisher intersection_count_pub_;
+
+  double tsdf_slice_height_;
 };
 }  // namespace voxblox_ground_truth
 

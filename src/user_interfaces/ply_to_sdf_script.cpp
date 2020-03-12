@@ -78,6 +78,11 @@ int main(int argc, char *argv[]) {
   map_config.tsdf_voxel_size = voxel_size;
   voxblox_ground_truth::SdfCreator sdf_creator(map_config);
 
+  // Get parameters for whether inside the mesh is free or occupied.
+  bool fill_inside = sdf_creator.getFillInside();
+  nh_private.param("fill_inside", fill_inside, fill_inside);
+  sdf_creator.setFillInside(fill_inside);
+
   // Iterate over all triangles
   size_t triangle_i = 0;
   size_t num_triangles = mesh.polygons.size();
@@ -120,14 +125,21 @@ int main(int argc, char *argv[]) {
   }
   ROS_INFO("Distance field building complete.");
 
+  // Optionally floodfill unoccupied space.
+  bool floodfill_unoccupied = false;
+  nh_private.param("floodfill_unoccupied", floodfill_unoccupied,
+                   floodfill_unoccupied);
+  if (floodfill_unoccupied) {
+    sdf_creator.floodfillUnoccupied(4 * voxel_size);
+  }
+
   /* Publish debugging visuals */
   bool publish_debug_visuals = true;
   nh_private.param("publish_visuals", publish_debug_visuals,
                    publish_debug_visuals);
   if (publish_debug_visuals) {
     ROS_INFO("Publishing visuals");
-    sdf_visualizer.publishTsdfVisuals(
-        sdf_creator.getTsdfMap().getTsdfLayer());
+    sdf_visualizer.publishTsdfVisuals(sdf_creator.getTsdfMap().getTsdfLayer());
     sdf_visualizer.publishIntersectionVisuals(
         sdf_creator.getIntersectionLayer());
   }

@@ -8,7 +8,11 @@
   <arg name="rotation" default="0 0 0.7071068 0.7071068" />
 
   <node name="ply_to_sdf" pkg="voxblox_ground_truth" type="ply_to_sdf" output="screen"
-        args="$(arg ply_input_file_path) $(arg tsdf_output_file_path) $(arg voxel_size) $(arg scale) $(arg translation) $(arg rotation)"/>
+        args="$(arg ply_input_file_path) $(arg tsdf_output_file_path) $(arg voxel_size) $(arg scale) $(arg translation) $(arg rotation)">
+    <param name="fill_inside" value="true" />
+    <param name="floodfill_unoccupied" value="false" />
+    <param name="tsdf_slice_height" value="4" />
+  </node>
 
   <arg name="rviz_file" default="$(find voxblox_ground_truth)/config/debug_ply_importer.rviz" />
   <node pkg="rviz" type="rviz" name="$(anon rviz)" respawn="false" args="-d $(arg rviz_file)" output="screen"/>
