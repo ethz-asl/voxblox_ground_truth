@@ -166,7 +166,7 @@ bool VoxbloxGroundTruthPlugin::serviceCallback(
 
                     // Add the vertex to the mesh
                     submesh.SetVertex(vertex_i, new_vertex);
-                  }
+                  } // for: vertex
 
                   // Integrate the mesh faces (triangles) into the SDF
                   unsigned int num_faces = submesh.GetIndexCount() / 3;
@@ -197,17 +197,17 @@ bool VoxbloxGroundTruthPlugin::serviceCallback(
 
                     // Integrate the triangle into the mesh
                     sdf_creator.integrateTriangle(triangle_vertices);
-                  }
-                }
+                  } // for: triangle
+                } // for: sub mesh
               } else {
                 LOG(WARNING) << "Could not get pointer to mesh '" << mesh_name
                              << "'";
                 return false;
-              }
+              } // else: mesh_ptr
             } else {
               LOG(WARNING) << "Could not get pointer to MeshManager";
               return false;
-            }
+            } // else: mesh_manager
           } else {
             // TODO(victorr): Add support for remaining Mesh shapes, namely
             //                - physics::Base::POLYLINE_SHAPE
@@ -218,14 +218,14 @@ bool VoxbloxGroundTruthPlugin::serviceCallback(
             LOG(WARNING) << "Not yet able to process shapes of type: "
                          << geometry_type_str;
             return false;
-          }
+          } // else: geometry_type_str known
         } else {
           LOG(WARNING) << "Geometry type not available";
           return false;
-        }
-      } // collision
-    } // link
-  } // model
+        } // else: geometry_msg.has_type
+      } // for: collision
+    } // for: link
+  } // for: model
 
   // Optionally floodfill unoccupied space.
   bool floodfill_unoccupied = false;
