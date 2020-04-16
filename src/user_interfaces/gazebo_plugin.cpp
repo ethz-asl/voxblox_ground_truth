@@ -75,139 +75,138 @@ bool VoxbloxGroundTruthPlugin::serviceCallback(
                 mesh_ptr = mesh_manager->GetMesh(mesh_name);
               }
 
-              if (geometry_type_str == "mesh" and !mesh_ptr) {
-                LOG(WARNING) << "Could not get pointer to mesh '" << mesh_name << "'";
-
-                // try different objects
-                size_t idx = mesh_name.find(".obj");
-                if (idx != std::string::npos) {
-                  mesh_name = mesh_name.replace(idx, std::string::npos, ".mtl");
-                  mesh_ptr = mesh_manager->GetMesh(mesh_name);
-                }
-
-                if (!mesh_ptr) {
+              if (!mesh_ptr) {
+                if (geometry_type_str == "mesh") {
                   LOG(WARNING) << "Could not get pointer to mesh '" << mesh_name << "'";
 
-                  idx = mesh_name.find(".mtl");
+                  // try different objects
+                  size_t idx = mesh_name.find(".obj");
                   if (idx != std::string::npos) {
-                    mesh_name = mesh_name.replace(idx, std::string::npos, ".dae");
+                    mesh_name = mesh_name.replace(idx, std::string::npos, ".mtl");
                     mesh_ptr = mesh_manager->GetMesh(mesh_name);
                   }
+
                   if (!mesh_ptr) {
                     LOG(WARNING) << "Could not get pointer to mesh '" << mesh_name << "'";
-                    LOG(WARNING) << "Skipping this mesh";
-                    continue;
+
+                    idx = mesh_name.find(".mtl");
+                    if (idx != std::string::npos) {
+                      mesh_name = mesh_name.replace(idx, std::string::npos, ".dae");
+                      mesh_ptr = mesh_manager->GetMesh(mesh_name);
+                    }
+                    if (!mesh_ptr) {
+                      LOG(WARNING) << "Could not get pointer to mesh '" << mesh_name << "'";
+                      LOG(WARNING) << "Skipping this mesh";
+                      continue;
+                    }
                   }
+                } else {
+                  LOG(WARNING) << "Could not get pointer to mesh '" << mesh_name
+                               << "'";
+                  return false;
                 }
               }
 
-              if (mesh_ptr) {
-                // iterate over sub meshes
-                for (uint submesh_id = 0;
-                     submesh_id < mesh_ptr->GetSubMeshCount(); submesh_id++) {
-                  // Create a copy of the submesh s.t. it can be manipulated
-                  common::SubMesh submesh(mesh_ptr->GetSubMesh(submesh_id));
+              // iterate over sub meshes
+              for (uint submesh_id = 0;
+                   submesh_id < mesh_ptr->GetSubMeshCount(); submesh_id++) {
+                // Create a copy of the submesh s.t. it can be manipulated
+                common::SubMesh submesh(mesh_ptr->GetSubMesh(submesh_id));
 
-                  // Make sure we're dealing with a triangle mesh
-                  if (submesh.GetPrimitiveType() !=
-                      common::SubMesh::TRIANGLES) {
-                    std::string mesh_type_str =
-                        mesh_type_names_[submesh.GetPrimitiveType()];
-                    LOG(ERROR) << "Encountered a mesh with type " << mesh_type_str
-                               << ". Currently, "
-                               << "only triangular meshes are supported."
-                               << "\nSkipping this mesh.";
-                    continue;
-                  }
+                // Make sure we're dealing with a triangle mesh
+                if (submesh.GetPrimitiveType() != common::SubMesh::TRIANGLES) {
+                  std::string mesh_type_str =
+                      mesh_type_names_[submesh.GetPrimitiveType()];
+                  LOG(ERROR) << "Encountered a mesh with type " << mesh_type_str
+                             << ". Currently, "
+                             << "only triangular meshes are supported."
+                             << "\nSkipping this mesh.";
+                  continue;
+                }
 
-                  // Find the geometry size
-                  // NOTE: There is no need to scale the geometry, since
-                  //       Gazebo already returns it at the appropriate scale
-                  ignition::math::Vector3d geometry_size;
-                  if (geometry_type_str == "box") {
-                    geometry_size = msgs::ConvertIgn(geometry_msg.box().size());
-                  } else if (geometry_type_str == "sphere") {
-                    double radius = geometry_msg.sphere().radius();
-                    geometry_size.Set(2.0 * radius, 2.0 * radius, 2.0 * radius);
-                  } else if (geometry_type_str == "cylinder") {
-                    double radius = geometry_msg.cylinder().radius();
-                    double length = geometry_msg.cylinder().length();
-                    geometry_size.Set(2.0 * radius, 2.0 * radius, length);
-                  } else if (geometry_type_str == "plane") {
-                    msgs::Vector2d dimensions = geometry_msg.plane().size();
-                    geometry_size.Set(dimensions.x(), dimensions.y(), 1.0);
-                  } else if (geometry_type_str == "mesh") {
-                    // NOTE: The shape scale is absolute w.r.t. the world
-                    geometry_size = collision->GetShape()->Scale();
-                    LOG(INFO) << "Scale: shape_scale " << geometry_size;
-                  } else {
-                    LOG(ERROR) << "Could not get geometry size of "  << geometry_type_str;
-                    continue;
-                  }
+                // Find the geometry size
+                // NOTE: There is no need to scale the geometry, since
+                //       Gazebo already returns it at the appropriate scale
+                ignition::math::Vector3d geometry_size;
+                if (geometry_type_str == "box") {
+                  geometry_size = msgs::ConvertIgn(geometry_msg.box().size());
+                } else if (geometry_type_str == "sphere") {
+                  double radius = geometry_msg.sphere().radius();
+                  geometry_size.Set(2.0 * radius, 2.0 * radius, 2.0 * radius);
+                } else if (geometry_type_str == "cylinder") {
+                  double radius = geometry_msg.cylinder().radius();
+                  double length = geometry_msg.cylinder().length();
+                  geometry_size.Set(2.0 * radius, 2.0 * radius, length);
+                } else if (geometry_type_str == "plane") {
+                  msgs::Vector2d dimensions = geometry_msg.plane().size();
+                  geometry_size.Set(dimensions.x(), dimensions.y(), 1.0);
+                } else if (geometry_type_str == "mesh") {
+                  // NOTE: The shape scale is absolute w.r.t. the world
+                  geometry_size = collision->GetShape()->Scale();
+                  LOG(INFO) << "Scale: shape_scale " << geometry_size;
+                } else {
+                  LOG(ERROR) << "Could not get geometry size of "  << geometry_type_str;
+                  continue;
+                }
 
-                  // Scale the mesh and transform it into world frame
-#if GAZEBO_MAJOR_VERSION > 8
-                  const ignition::math::Pose3d transform =
-                      collision->WorldPose();
-#else
-                  const ignition::math::Pose3d transform =
-                      collision->GetWorldPose().Ign();
-#endif
-                  for (unsigned int vertex_i = 0;
-                       vertex_i < submesh.GetVertexCount(); vertex_i++) {
-                    // Create a copy of the vertex s.t. it can be manipulated
-                    ignition::math::Vector3d new_vertex =
-                        submesh.Vertex(vertex_i);
+                // Scale the mesh and transform it into world frame
+# if GAZEBO_MAJOR_VERSION > 8
+                const ignition::math::Pose3d transform =
+                    collision->WorldPose();
+# else
+                const ignition::math::Pose3d transform =
+                    collision->GetWorldPose().Ign();
+# endif
+                for (unsigned int vertex_i = 0;
+                     vertex_i < submesh.GetVertexCount(); vertex_i++) {
+                  // Create a copy of the vertex s.t. it can be manipulated
+                  ignition::math::Vector3d new_vertex =
+                      submesh.Vertex(vertex_i);
 
-                    // Scale and transform it into world frame
-                    new_vertex *= geometry_size;
-                    new_vertex = transform.Rot() * new_vertex;
-                    new_vertex += transform.Pos();
+                  // Scale and transform it into world frame
+                  new_vertex *= geometry_size;
+                  new_vertex = transform.Rot() * new_vertex;
+                  new_vertex += transform.Pos();
 
-                    // Add the vertex to the mesh
-                    submesh.SetVertex(vertex_i, new_vertex);
-                  } // for: vertex
+                  // Add the vertex to the mesh
+                  submesh.SetVertex(vertex_i, new_vertex);
+                }
 
-                  // Integrate the mesh faces (triangles) into the SDF
-                  unsigned int num_faces = submesh.GetIndexCount() / 3;
-                  LOG(INFO) << "Integrating " << num_faces << " faces";
-                  for (unsigned int triangle_i = 0; triangle_i < num_faces;
-                       triangle_i++) {
-                    // Get the indices of the vertices
-                    const unsigned int index_a = submesh.GetIndex(triangle_i * 3);
-                    const unsigned int index_b =
-                        submesh.GetIndex(triangle_i * 3 + 1);
-                    const unsigned int index_c =
-                        submesh.GetIndex(triangle_i * 3 + 2);
+                // Integrate the mesh faces (triangles) into the SDF
+                unsigned int num_faces = submesh.GetIndexCount() / 3;
+                LOG(INFO) << "Integrating " << num_faces << " faces";
+                for (unsigned int triangle_i = 0; triangle_i < num_faces;
+                     triangle_i++) {
+                  // Get the indices of the vertices
+                  const unsigned int index_a = submesh.GetIndex(triangle_i * 3);
+                  const unsigned int index_b =
+                      submesh.GetIndex(triangle_i * 3 + 1);
+                  const unsigned int index_c =
+                      submesh.GetIndex(triangle_i * 3 + 2);
 
-                    // Get the coordinates of the vertices
-                    TriangularFaceVertexCoordinates triangle_vertices;
-                    triangle_vertices.vertex_a = {
-                        static_cast<float>(submesh.Vertex(index_a).X()),
-                        static_cast<float>(submesh.Vertex(index_a).Y()),
-                        static_cast<float>(submesh.Vertex(index_a).Z())};
-                    triangle_vertices.vertex_b = {
-                        static_cast<float>(submesh.Vertex(index_b).X()),
-                        static_cast<float>(submesh.Vertex(index_b).Y()),
-                        static_cast<float>(submesh.Vertex(index_b).Z())};
-                    triangle_vertices.vertex_c = {
-                        static_cast<float>(submesh.Vertex(index_c).X()),
-                        static_cast<float>(submesh.Vertex(index_c).Y()),
-                        static_cast<float>(submesh.Vertex(index_c).Z())};
+                  // Get the coordinates of the vertices
+                  TriangularFaceVertexCoordinates triangle_vertices;
+                  triangle_vertices.vertex_a = {
+                      static_cast<float>(submesh.Vertex(index_a).X()),
+                      static_cast<float>(submesh.Vertex(index_a).Y()),
+                      static_cast<float>(submesh.Vertex(index_a).Z())};
+                  triangle_vertices.vertex_b = {
+                      static_cast<float>(submesh.Vertex(index_b).X()),
+                      static_cast<float>(submesh.Vertex(index_b).Y()),
+                      static_cast<float>(submesh.Vertex(index_b).Z())};
+                  triangle_vertices.vertex_c = {
+                      static_cast<float>(submesh.Vertex(index_c).X()),
+                      static_cast<float>(submesh.Vertex(index_c).Y()),
+                      static_cast<float>(submesh.Vertex(index_c).Z())};
 
-                    // Integrate the triangle into the mesh
-                    sdf_creator.integrateTriangle(triangle_vertices);
-                  } // for: triangle
-                } // for: sub mesh
-              } else {
-                LOG(WARNING) << "Could not get pointer to mesh '" << mesh_name
-                             << "'";
-                return false;
-              } // else: mesh_ptr
+                  // Integrate the triangle into the mesh
+                  sdf_creator.integrateTriangle(triangle_vertices);
+                }
+              }
             } else {
               LOG(WARNING) << "Could not get pointer to MeshManager";
               return false;
-            } // else: mesh_manager
+            }
           } else {
             // TODO(victorr): Add support for remaining Mesh shapes, namely
             //                - physics::Base::POLYLINE_SHAPE
@@ -218,14 +217,14 @@ bool VoxbloxGroundTruthPlugin::serviceCallback(
             LOG(WARNING) << "Not yet able to process shapes of type: "
                          << geometry_type_str;
             return false;
-          } // else: geometry_type_str known
+          }
         } else {
           LOG(WARNING) << "Geometry type not available";
           return false;
-        } // else: geometry_msg.has_type
-      } // for: collision
-    } // for: link
-  } // for: model
+        }
+      }
+    }
+  }
 
   // Optionally floodfill unoccupied space.
   bool floodfill_unoccupied = false;
