@@ -68,43 +68,38 @@ bool VoxbloxGroundTruthPlugin::serviceCallback(
               const common::Mesh* mesh_ptr;
               std::string mesh_name;
               if (geometry_type_str == "mesh") {
-                mesh_name = geometry_msg.mesh().filename();
-                mesh_ptr = mesh_manager->Load(mesh_name);
+                // find base name of mesh object
+                std::string mesh_name_base = geometry_msg.mesh().filename();
+                size_t idx = mesh_name.find(".obj");
+                mesh_name_base.erase(
+                    mesh_name_base.begin() + idx, mesh_name_base.end());
+                // try loading different mesh objects
+                std::vector<std::string> object_types = {".obj", ".mtl", ".dae"};
+                for (const std::string& object_type : object_types) {
+                  LOG(INFO) << "Attempting to load mesh " << mesh_name;
+                  mesh_name = mesh_name_base + object_type;
+                  mesh_ptr = mesh_manager->GetMesh(mesh_name);
+                  if (mesh_ptr) {
+                    LOG(INFO) << "Loading mesh " << mesh_name << " successful.";
+                    break;
+                  } else {
+                    LOG(INFO) << "Loading mesh " << mesh_name << " failed.";
+                  }
+                }
+                if (!mesh_ptr) {
+                  LOG(WARNING) << "All attempts to load " << mesh_name_base
+                               << " failed. Skipping this object.";
+                  continue;
+                }
               } else {
                 mesh_name = "unit_" + geometry_type_str;
                 mesh_ptr = mesh_manager->GetMesh(mesh_name);
               }
 
               if (!mesh_ptr) {
-                if (geometry_type_str == "mesh") {
-                  LOG(WARNING) << "Could not get pointer to mesh '" << mesh_name << "'";
-
-                  // try different objects
-                  size_t idx = mesh_name.find(".obj");
-                  if (idx != std::string::npos) {
-                    mesh_name = mesh_name.replace(idx, std::string::npos, ".mtl");
-                    mesh_ptr = mesh_manager->GetMesh(mesh_name);
-                  }
-
-                  if (!mesh_ptr) {
-                    LOG(WARNING) << "Could not get pointer to mesh '" << mesh_name << "'";
-
-                    idx = mesh_name.find(".mtl");
-                    if (idx != std::string::npos) {
-                      mesh_name = mesh_name.replace(idx, std::string::npos, ".dae");
-                      mesh_ptr = mesh_manager->GetMesh(mesh_name);
-                    }
-                    if (!mesh_ptr) {
-                      LOG(WARNING) << "Could not get pointer to mesh '" << mesh_name << "'";
-                      LOG(WARNING) << "Skipping this mesh";
-                      continue;
-                    }
-                  }
-                } else {
-                  LOG(WARNING) << "Could not get pointer to mesh '" << mesh_name
-                               << "'";
-                  return false;
-                }
+                LOG(WARNING) << "Could not get pointer to mesh '" << mesh_name
+                             << "'";
+                return false;
               }
 
               // iterate over sub meshes
