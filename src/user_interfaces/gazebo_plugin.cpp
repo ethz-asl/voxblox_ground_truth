@@ -69,27 +69,40 @@ bool VoxbloxGroundTruthPlugin::serviceCallback(
               std::string mesh_name;
               if (geometry_type_str == "mesh") {
                 // find base name of mesh object
-                std::string mesh_name_base = geometry_msg.mesh().filename();
-                size_t idx = mesh_name.find(".obj");
-                mesh_name_base.erase(
-                    mesh_name_base.begin() + idx, mesh_name_base.end());
+                std::string mesh_base_name = geometry_msg.mesh().filename();
+                LOG(INFO) << "Attempting to load mesh " << mesh_base_name;
+                // extracting file name
+                size_t idx = mesh_base_name.find(".");
+                mesh_base_name.erase(
+                    mesh_base_name.begin() + idx, mesh_base_name.end());
+                std::string praefix = "file://";
+                size_t idx_praefix = mesh_base_name.find(praefix);
+                if (idx_praefix < mesh_base_name.size()
+                    && mesh_base_name.size() > praefix.size()) {
+                  mesh_base_name.erase(mesh_base_name.begin(),
+                                       mesh_base_name.begin() + praefix.size());
+                }
                 // try loading different mesh objects
-                std::vector<std::string> object_types = {".obj", ".mtl", ".dae"};
+                std::vector<std::string> object_types;
+                object_types.emplace_back(".dae");
+                object_types.emplace_back(".obj");
+                object_types.emplace_back(".mtl");
                 for (const std::string& object_type : object_types) {
-                  LOG(INFO) << "Attempting to load mesh " << mesh_name;
-                  mesh_name = mesh_name_base + object_type;
-                  mesh_ptr = mesh_manager->GetMesh(mesh_name);
+                  mesh_name = mesh_base_name + object_type;
+                  mesh_ptr = mesh_manager->Load(mesh_name);
                   if (mesh_ptr) {
-                    LOG(INFO) << "Loading mesh " << mesh_name << " successful.";
+                    LOG(INFO) << "- Loading file \"" << mesh_name
+                              << "\" successful.";
                     break;
                   } else {
-                    LOG(INFO) << "Loading mesh " << mesh_name << " failed.";
+                    LOG(INFO) << "- Loading mesh \"" << mesh_name
+                              << "\" failed.";
                   }
                 }
                 if (!mesh_ptr) {
-                  LOG(WARNING) << "All attempts to load " << mesh_name_base
-                               << " failed. Skipping this object.";
-                  continue;
+                  mesh_name = geometry_msg.mesh().filename();
+                  LOG(WARNING) << "All attempts to load mesh " << mesh_name
+                               << " failed.";
                 }
               } else {
                 mesh_name = "unit_" + geometry_type_str;
