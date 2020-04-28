@@ -129,6 +129,8 @@ bool VoxbloxGroundTruthPlugin::serviceCallback(
                              << ". Currently, "
                              << "only triangular meshes are supported."
                              << "\nSkipping this mesh.";
+                  // TODO: Add support for other mesh types, e.g.
+                  //       - common::SubMesh::LINES
                   continue;
                 }
 
