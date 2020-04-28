@@ -144,7 +144,7 @@ void SdfCreator::getAABBIndices(GlobalIndex *global_voxel_index_min,
   }
 }
 
-void SdfCreator::updateSigns() {
+void SdfCreator::updateSigns(bool dont_stop) {
   LOG(INFO) << "Computing the signs...";
   // Get the TSDF AABB, expressed in voxel index units
   GlobalIndex global_voxel_index_min, global_voxel_index_max;
@@ -158,7 +158,7 @@ void SdfCreator::updateSigns() {
       for (x = global_voxel_index_min.x(); x < global_voxel_index_max.x();
            x++) {
         // Exit if CTRL+C was pressed
-        if (!ros::ok()) {
+        if (!ros::ok() && !dont_stop) {
           std::cout << "\nShutting down..." << std::endl;
           return;
         }
@@ -199,7 +199,10 @@ const voxblox::TsdfMap &SdfCreator::getTsdfMap() {
   return tsdf_map_;
 }
 
-void SdfCreator::floodfillUnoccupied(FloatingPoint distance_value) {
+void SdfCreator::floodfillUnoccupied(FloatingPoint distance_value,
+                                     bool dont_stop) {
+
+
   // Get the TSDF AABB, expressed in voxel index units
   GlobalIndex global_voxel_index_min, global_voxel_index_max;
   getAABBIndices(&global_voxel_index_min, &global_voxel_index_max);
@@ -215,7 +218,7 @@ void SdfCreator::floodfillUnoccupied(FloatingPoint distance_value) {
       for (z = global_voxel_index_min.z(); z < global_voxel_index_max.z();
            z++) {
         // Exit if CTRL+C was pressed
-        if (!ros::ok()) {
+        if (!ros::ok() && !dont_stop) {
           std::cout << "\nShutting down..." << std::endl;
           return;
         }
@@ -266,6 +269,10 @@ void SdfCreator::floodfillUnoccupied(FloatingPoint distance_value) {
         // been updated.
       }
     }
+  }
+
+  if (!signs_up_to_date_) {
+    updateSigns(dont_stop);
   }
 }
 

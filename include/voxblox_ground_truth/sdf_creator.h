@@ -33,11 +33,11 @@ class SdfCreator {
 
   // Floodfill the unoccupied space in the mesh, up to the bounds of the AABB.
   // TODO(helenol): Allow specifying some other bounds?
-  void floodfillUnoccupied(FloatingPoint distance_value);
+  void floodfillUnoccupied(FloatingPoint distance_value, bool dont_stop = false);
 
  private:
   bool signs_up_to_date_;
-  void updateSigns();
+  void updateSigns(bool dont_stop = false);
   void getAABBIndices(GlobalIndex* global_voxel_index_min, GlobalIndex* global_voxel_index_max) const;
 
 
