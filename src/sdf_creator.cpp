@@ -1,4 +1,6 @@
 #include <ros/ros.h>
+#include <voxblox/core/block_hash.h>
+#include <voxblox/core/common.h>
 #include <voxblox/utils/neighbor_tools.h>
 #include <limits>
 
@@ -201,8 +203,6 @@ const voxblox::TsdfMap &SdfCreator::getTsdfMap() {
 
 void SdfCreator::floodfillUnoccupied(FloatingPoint distance_value,
                                      bool dont_stop) {
-
-
   // Get the TSDF AABB, expressed in voxel index units
   GlobalIndex global_voxel_index_min, global_voxel_index_max;
   getAABBIndices(&global_voxel_index_min, &global_voxel_index_max);
@@ -276,4 +276,88 @@ void SdfCreator::floodfillUnoccupied(FloatingPoint distance_value,
   }
 }
 
+void SdfCreator::clearSpaceInFrontOfTriangles(
+    const std::vector<
+        TriangularFaceVertexCoordinates,
+        Eigen::aligned_allocator<TriangularFaceVertexCoordinates> >
+        &triangle_list,
+    FloatingPoint distance, float distance_value) {
+  if (!signs_up_to_date_) {
+    updateSigns(true);
+  }
+
+  voxblox::LongIndexSet voxel_indices;
+
+  for (const TriangularFaceVertexCoordinates &vertex_coordinates :
+       triangle_list) {
+    // Compute the surface normal of the triangle.
+    Point normal =
+        (vertex_coordinates.vertex_b - vertex_coordinates.vertex_a)
+            .cross(vertex_coordinates.vertex_c - vertex_coordinates.vertex_a);
+    normal.normalize();
+
+    // Check if normal is pointing to 0,0,0.
+
+    // Get the voxel at the center of the triangle.
+    Point center = (vertex_coordinates.vertex_a + vertex_coordinates.vertex_b +
+                    vertex_coordinates.vertex_c) /
+                   3.0;
+
+    LongIndexElement distance_voxels = static_cast<LongIndexElement>(
+        std::ceil(distance * tsdf_map_.getTsdfLayerPtr()->voxel_size_inv()));
+
+    GlobalIndex center_index = voxblox::getGridIndexFromPoint<GlobalIndex>(
+        center, tsdf_map_.getTsdfLayerPtr()->voxel_size_inv());
+
+    // Get the AABB of the half-sphere (this is a little too big, but easier to
+    // compute).
+    GlobalIndex min_index = center_index.array() - distance_voxels;
+    GlobalIndex max_index = center_index.array() + distance_voxels;
+
+    // Iterate over x, y, z to minimize cache misses.
+    GlobalIndex global_index = GlobalIndex::Zero();
+    for (global_index.x() = min_index.x(); global_index.x() < max_index.x();
+         global_index.x()++) {
+      for (global_index.y() = min_index.y(); global_index.y() < max_index.y();
+           global_index.y()++) {
+        for (global_index.z() = min_index.z(); global_index.z() < max_index.z();
+             global_index.z()++) {
+          // Get the actual position of this point.
+          Point current_point = voxblox::getCenterPointFromGridIndex(
+              global_index, tsdf_map_.getTsdfLayerPtr()->voxel_size());
+
+          // Project a half-sphere around the center, check if it's in front
+          // of the half-sphere and not too far.
+          FloatingPoint projected_distance =
+              (current_point - center).dot(normal);
+          if (projected_distance < 0 || projected_distance > distance) {
+            continue;
+          }
+          voxel_indices.insert(global_index);
+        }
+      }
+    }
+  }
+
+  // Iterate over every voxel.
+  for (const GlobalIndex &voxel_global_index : voxel_indices) {
+    // Get this voxel.
+    voxblox::TsdfVoxel *tsdf_voxel =
+        tsdf_map_.getTsdfLayerPtr()->getVoxelPtrByGlobalIndex(
+            voxel_global_index);
+    if (tsdf_voxel == nullptr) {
+      // Make sure block is allocated.
+      Point current_point = voxblox::getCenterPointFromGridIndex(
+          voxel_global_index, tsdf_map_.getTsdfLayerPtr()->voxel_size());
+      tsdf_map_.getTsdfLayerPtr()->allocateNewBlockByCoordinates(current_point);
+      tsdf_voxel = tsdf_map_.getTsdfLayerPtr()->getVoxelPtrByGlobalIndex(
+          voxel_global_index);
+    }
+
+    if (tsdf_voxel->weight <= 0.0f) {
+      tsdf_voxel->weight = 1.0f;
+      tsdf_voxel->distance = distance_value;
+    }
+  }
+}
 }  // namespace voxblox_ground_truth

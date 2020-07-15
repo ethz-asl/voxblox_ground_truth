@@ -22,6 +22,7 @@ struct TriangularFaceVertexIds {
 
 // Coordinates of the vertices for all three triangle corners
 struct TriangularFaceVertexCoordinates {
+  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   Point vertex_a;
   Point vertex_b;
   Point vertex_c;

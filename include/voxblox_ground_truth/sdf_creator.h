@@ -33,13 +33,23 @@ class SdfCreator {
 
   // Floodfill the unoccupied space in the mesh, up to the bounds of the AABB.
   // TODO(helenol): Allow specifying some other bounds?
-  void floodfillUnoccupied(FloatingPoint distance_value, bool dont_stop = false);
+  void floodfillUnoccupied(FloatingPoint distance_value,
+                           bool dont_stop = false);
+
+  // For each triangle, floodfill any space in a half-sphere in front of it up
+  // to distance, setting the value to distance_value.
+  void clearSpaceInFrontOfTriangles(
+      const std::vector<
+          TriangularFaceVertexCoordinates,
+          Eigen::aligned_allocator<TriangularFaceVertexCoordinates> >
+          &triangle_list,
+      FloatingPoint distance, float distance_value);
 
  private:
   bool signs_up_to_date_;
   void updateSigns(bool dont_stop = false);
-  void getAABBIndices(GlobalIndex* global_voxel_index_min, GlobalIndex* global_voxel_index_max) const;
-
+  void getAABBIndices(GlobalIndex *global_voxel_index_min,
+                      GlobalIndex *global_voxel_index_max) const;
 
   voxblox::TsdfMap tsdf_map_;
   voxblox::Layer<IntersectionVoxel> intersection_layer_;

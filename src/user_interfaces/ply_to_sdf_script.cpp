@@ -1,4 +1,5 @@
 #include <pcl/io/ply_io.h>
+#include <Eigen/StdVector>
 #include <cstring>
 #include <fstream>
 #include <iostream>
@@ -86,6 +87,11 @@ int main(int argc, char *argv[]) {
   // Iterate over all triangles
   size_t triangle_i = 0;
   size_t num_triangles = mesh.polygons.size();
+
+  std::vector<TriangularFaceVertexCoordinates,
+              Eigen::aligned_allocator<TriangularFaceVertexCoordinates> >
+      triangle_vector;
+
   for (const pcl::Vertices &polygon : mesh.polygons) {
     // Ensure that the polygon is a triangle (other meshes are not supported)
     CHECK_EQ(polygon.vertices.size(), 3);
@@ -122,6 +128,7 @@ int main(int argc, char *argv[]) {
 
     // Update the SDF with the new triangle
     sdf_creator.integrateTriangle(triangle_vertices);
+    triangle_vector.push_back(triangle_vertices);
   }
   ROS_INFO("Distance field building complete.");
 
@@ -130,7 +137,23 @@ int main(int argc, char *argv[]) {
   nh_private.param("floodfill_unoccupied", floodfill_unoccupied,
                    floodfill_unoccupied);
   if (floodfill_unoccupied) {
+    ROS_INFO("Floodfilling unoccupied space.");
+
     sdf_creator.floodfillUnoccupied(4 * voxel_size);
+  }
+
+  // Optionally clear space in front of triangles.
+  bool clear_space_in_front_of_triangles = false;
+  double clear_space_distance = 1.0;
+  nh_private.param("clear_space_in_front_of_triangles",
+                   clear_space_in_front_of_triangles,
+                   clear_space_in_front_of_triangles);
+  nh_private.param("clear_space_distance", clear_space_distance,
+                   clear_space_distance);
+  if (clear_space_in_front_of_triangles) {
+    ROS_INFO("Clearing space in front of triangles.");
+    sdf_creator.clearSpaceInFrontOfTriangles(
+        triangle_vector, clear_space_distance, 4 * voxel_size);
   }
 
   /* Publish debugging visuals */
