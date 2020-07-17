@@ -281,22 +281,19 @@ void SdfCreator::clearSpaceInFrontOfTriangles(
         TriangularFaceVertexCoordinates,
         Eigen::aligned_allocator<TriangularFaceVertexCoordinates> >
         &triangle_list,
-    FloatingPoint distance, float distance_value) {
-  if (!signs_up_to_date_) {
-    updateSigns(true);
-  }
-
+    const voxblox::Pointcloud &normals, FloatingPoint distance,
+    float distance_value) {
   voxblox::LongIndexSet voxel_indices;
 
-  for (const TriangularFaceVertexCoordinates &vertex_coordinates :
-       triangle_list) {
-    // Compute the surface normal of the triangle.
-    Point normal =
-        (vertex_coordinates.vertex_b - vertex_coordinates.vertex_a)
-            .cross(vertex_coordinates.vertex_c - vertex_coordinates.vertex_a);
-    normal.normalize();
+  CHECK_EQ(triangle_list.size(), normals.size());
 
-    // Check if normal is pointing to 0,0,0.
+  for (size_t i = 0; i < triangle_list.size(); i++) {
+    const TriangularFaceVertexCoordinates &vertex_coordinates =
+        triangle_list[i];
+    Point normal = normals[i];
+
+    // Compute the surface normal of the triangle.
+    normal.normalize();
 
     // Get the voxel at the center of the triangle.
     Point center = (vertex_coordinates.vertex_a + vertex_coordinates.vertex_b +
@@ -360,4 +357,79 @@ void SdfCreator::clearSpaceInFrontOfTriangles(
     }
   }
 }
+
+void SdfCreator::integrateTriangleWithNormal(
+    const TriangularFaceVertexCoordinates &vertex_coordinates,
+    const voxblox::Point &normal) {
+  // Instantiate the triangle geometry tool
+  const TriangleGeometer triangle_geometer(vertex_coordinates);
+
+  // Get the triangle's Axis Aligned Bounding Box
+  const AABB aabb_tight = triangle_geometer.getAABB();
+
+  // Express the AABB corners in voxel index units
+  GlobalIndex aabb_min_index = (aabb_tight.min.array() * voxel_size_inv_)
+                                   .floor()
+                                   .cast<LongIndexElement>();
+  GlobalIndex aabb_max_index = (aabb_tight.max.array() * voxel_size_inv_)
+                                   .ceil()
+                                   .cast<LongIndexElement>();
+
+  // Add padding to the AABB indices
+  const GlobalIndex voxel_index_min = aabb_min_index.array() - aabb_padding_;
+  const GlobalIndex voxel_index_max = aabb_max_index.array() + aabb_padding_;
+
+  // Iterate over all voxels within the triangle's padded AABB
+  LongIndexElement x, y, z;
+  Point voxel_origin;
+  for (z = voxel_index_min[2]; z < voxel_index_max[2]; z++) {
+    for (y = voxel_index_min[1]; y < voxel_index_max[1]; y++) {
+      for (x = voxel_index_min[0]; x < voxel_index_max[0]; x++) {
+        GlobalIndex voxel_index(x, y, z);
+
+        // Get the indices of the current voxel and its containing block
+        BlockIndex block_index = voxblox::getBlockIndexFromGlobalVoxelIndex(
+            voxel_index, voxels_per_side_inv_);
+        VoxelIndex local_voxel_index = voxblox::getLocalFromGlobalVoxelIndex(
+            voxel_index, voxels_per_side_);
+
+        // Allocate the block and get the voxel
+        voxblox::Block<voxblox::TsdfVoxel>::Ptr block_ptr =
+            tsdf_map_.getTsdfLayerPtr()->allocateBlockPtrByIndex(block_index);
+        voxblox::TsdfVoxel &voxel =
+            block_ptr->getVoxelByVoxelIndex(local_voxel_index);
+
+        // Compute distance to triangle
+        voxel_origin =
+            voxblox::getOriginPointFromGridIndex(voxel_index, voxel_size_);
+        float distance = triangle_geometer.getDistanceToPoint(voxel_origin);
+
+        // Update voxel if new distance is lower or if it is new
+        // TODO(victorr): Take the absolute distance, to account for signs that
+        //                might already have been computed
+        if (std::abs(distance) < std::abs(voxel.distance) ||
+            voxel.weight == 0.0f) {
+          voxel.distance = distance;
+          voxel.weight += 1;
+
+          // Correct the sign based on the normal.
+          // This is pretty rough since we're just using the triangle center vs
+          // voxel center comparison... Will have to see how it works.
+          Point triangle_center;
+          triangle_geometer.getClosestPoint(voxel_origin, &triangle_center);
+          FloatingPoint projected_distance =
+              (voxel_origin - triangle_center).dot(normal.normalized());
+          // ROS_INFO_STREAM("Projected distance: " << projected_distance
+          //                                       << " distance: " <<
+          //                                       distance);
+          if (projected_distance < 0) {
+            voxel.distance = -voxel.distance;
+          }
+        }
+      }
+    }
+  }
+  signs_up_to_date_ = true;
+}
+
 }  // namespace voxblox_ground_truth

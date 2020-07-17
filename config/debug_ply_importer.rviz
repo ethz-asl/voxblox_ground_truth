@@ -25,7 +25,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: Intersection counts
+    SyncSource: TSDF slice
 Preferences:
   PromptSaveOnExit: true
 Toolbars:
@@ -96,9 +96,9 @@ Visualization Manager:
       Enabled: true
       Invert Rainbow: false
       Max Color: 255; 255; 255
-      Max Intensity: 0.09999744594097137
+      Max Intensity: 0.09999895095825195
       Min Color: 0; 0; 0
-      Min Intensity: -0.09999952465295792
+      Min Intensity: -0.09999584406614304
       Name: TSDF map (near surface)
       Position Transformer: XYZ
       Queue Size: 10
@@ -126,7 +126,7 @@ Visualization Manager:
       Enabled: true
       Invert Rainbow: false
       Max Color: 255; 255; 255
-      Max Intensity: 0.4000000059604645
+      Max Intensity: 0.6656598448753357
       Min Color: 0; 0; 0
       Min Intensity: 0
       Name: TSDF slice
@@ -139,7 +139,7 @@ Visualization Manager:
       Topic: /ply_to_sdf/tsdf_slice
       Unreliable: false
       Use Fixed Frame: true
-      Use rainbow: false
+      Use rainbow: true
       Value: true
     - Alpha: 1
       Autocompute Intensity Bounds: true
@@ -199,25 +199,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 27.49062156677246
+      Distance: 16.925342559814453
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: -8.777700424194336
-        Y: -1.972806692123413
-        Z: 2.5600059032440186
+        X: -0.260762095451355
+        Y: 3.714777708053589
+        Z: -2.939055919647217
       Focal Shape Fixed Size: false
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.2497963905334473
+      Pitch: 1.5697963237762451
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 1.4472419023513794
+      Yaw: 6.270427227020264
     Saved: ~
 Window Geometry:
   Displays:

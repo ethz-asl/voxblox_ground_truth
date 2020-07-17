@@ -70,7 +70,7 @@ int main(int argc, char *argv[]) {
   pcl::PolygonMesh mesh;
   ROS_INFO_STREAM("Importing .ply file: " << ply_input_filepath);
   pcl::io::loadPLYFile(ply_input_filepath, mesh);
-  pcl::PointCloud<pcl::PointXYZ> vertex_coordinates;
+  pcl::PointCloud<pcl::PointNormal> vertex_coordinates;
   pcl::fromPCLPointCloud2(mesh.cloud, vertex_coordinates);
 
   // Initialize the SDF creator
@@ -91,6 +91,7 @@ int main(int argc, char *argv[]) {
   std::vector<TriangularFaceVertexCoordinates,
               Eigen::aligned_allocator<TriangularFaceVertexCoordinates> >
       triangle_vector;
+  voxblox::Pointcloud normals;
 
   for (const pcl::Vertices &polygon : mesh.polygons) {
     // Ensure that the polygon is a triangle (other meshes are not supported)
@@ -126,9 +127,27 @@ int main(int argc, char *argv[]) {
     triangle_vertices.vertex_b = transform * (scale_factor * vertex_b);
     triangle_vertices.vertex_c = transform * (scale_factor * vertex_c);
 
+    // Get the normal of the whole face.
+    voxblox::Point normal_a, normal_b, normal_c;
+    normal_a << vertex_coordinates[polygon.vertices[0]].normal_x,
+        vertex_coordinates[polygon.vertices[0]].normal_y,
+        vertex_coordinates[polygon.vertices[0]].normal_z;
+    normal_b << vertex_coordinates[polygon.vertices[1]].normal_x,
+        vertex_coordinates[polygon.vertices[1]].normal_y,
+        vertex_coordinates[polygon.vertices[1]].normal_z;
+    normal_c << vertex_coordinates[polygon.vertices[2]].normal_x,
+        vertex_coordinates[polygon.vertices[2]].normal_y,
+        vertex_coordinates[polygon.vertices[2]].normal_z;
+
+    voxblox::Point normal = (normal_a + normal_b + normal_c) / 3.0;
+    normal = transform * (scale_factor * normal);
+    // ROS_INFO_STREAM("Point: " << triangle_vertices.vertex_a.transpose()
+    //                          << " Normal: " << normal.transpose());
+
     // Update the SDF with the new triangle
-    sdf_creator.integrateTriangle(triangle_vertices);
+    sdf_creator.integrateTriangleWithNormal(triangle_vertices, normal);
     triangle_vector.push_back(triangle_vertices);
+    normals.push_back(normal);
   }
   ROS_INFO("Distance field building complete.");
 
@@ -140,6 +159,20 @@ int main(int argc, char *argv[]) {
     ROS_INFO("Floodfilling unoccupied space.");
 
     sdf_creator.floodfillUnoccupied(4 * voxel_size);
+  }
+
+  // Optionally clear space in front of triangles.
+  bool clear_space_in_front_of_triangles = false;
+  double clear_space_distance = 1.0;
+  nh_private.param("clear_space_in_front_of_triangles",
+                   clear_space_in_front_of_triangles,
+                   clear_space_in_front_of_triangles);
+  nh_private.param("clear_space_distance", clear_space_distance,
+                   clear_space_distance);
+  if (clear_space_in_front_of_triangles) {
+    ROS_INFO("Clearing space in front of triangles.");
+    sdf_creator.clearSpaceInFrontOfTriangles(
+        triangle_vector, normals, clear_space_distance, 4 * voxel_size);
   }
 
   /* Publish debugging visuals */

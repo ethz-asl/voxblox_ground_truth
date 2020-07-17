@@ -3,7 +3,8 @@
 namespace voxblox_ground_truth {
 // This function is heavily based on the example on page 141 of:
 // "Real-time collision detection" by Christer Ericson
-float TriangleGeometer::getDistanceToPoint(const Point &point) const {
+void TriangleGeometer::getClosestPoint(const Point &point,
+                                       Point *closest) const {
   using Vector = Point;
 
   // Check if the point is in the region outside A
@@ -14,7 +15,8 @@ float TriangleGeometer::getDistanceToPoint(const Point &point) const {
   const float d2 = ac.dot(ap);
   if (d1 <= 0.0f && d2 <= 0.0f) {
     // The barycentric coordinates are (1,0,0) => the closest point is vertex_a
-    return (vertices_.vertex_a - point).norm();
+    *closest = vertices_.vertex_a;
+    return;
   }
 
   // Check if P in vertex region outside B
@@ -23,7 +25,8 @@ float TriangleGeometer::getDistanceToPoint(const Point &point) const {
   const float d4 = ac.dot(bp);
   if (d3 >= 0.0f && d4 <= d3) {
     // The barycentric coordinates are (0,1,0) => the closest point is vertex_b
-    return (vertices_.vertex_b - point).norm();
+    *closest = vertices_.vertex_b;
+    return;
   }
 
   // Check if P in edge region of AB, if so return projection of P onto AB
@@ -32,7 +35,8 @@ float TriangleGeometer::getDistanceToPoint(const Point &point) const {
     const float v = d1 / (d1 - d3);
     // The barycentric coordinates are (1-v,v,0)
     Point closest_pt = vertices_.vertex_a + v * ab;
-    return (closest_pt - point).norm();
+    *closest = closest_pt;
+    return;
   }
 
   // Check if P in vertex region outside C
@@ -41,7 +45,8 @@ float TriangleGeometer::getDistanceToPoint(const Point &point) const {
   const float d6 = ac.dot(cp);
   if (d6 >= 0.0f && d5 <= d6) {
     // The barycentric coordinates are (0,0,1) => the closest point is vertex_c
-    return (vertices_.vertex_c - point).norm();
+    *closest = vertices_.vertex_c;
+    return;
   }
 
   // Check if P in edge region of AC, if so return projection of P onto AC
@@ -50,7 +55,8 @@ float TriangleGeometer::getDistanceToPoint(const Point &point) const {
     const float w = d2 / (d2 - d6);
     // The barycentric coordinates are (1-w,0,w)
     const Point closest_pt = vertices_.vertex_a + w * ac;
-    return (closest_pt - point).norm();
+    *closest = closest_pt;
+    return;
   }
 
   // Check if P in edge region of BC, if so return projection of P onto BC
@@ -58,9 +64,10 @@ float TriangleGeometer::getDistanceToPoint(const Point &point) const {
   if (va <= 0.0f && (d4 - d3) >= 0.0f && (d5 - d6) >= 0.0f) {
     const float w = (d4 - d3) / ((d4 - d3) + (d5 - d6));
     // The barycentric coordinates are (0,1-w,w)
-    const Point closest_pt = vertices_.vertex_b
-                           + w * (vertices_.vertex_c - vertices_.vertex_b);
-    return (closest_pt - point).norm();
+    const Point closest_pt =
+        vertices_.vertex_b + w * (vertices_.vertex_c - vertices_.vertex_b);
+    *closest = closest_pt;
+    return;
   }
 
   // P inside face region. Compute Q through its barycentric coordinates (u,v,w)
@@ -69,19 +76,23 @@ float TriangleGeometer::getDistanceToPoint(const Point &point) const {
   const float w = vc * denom;
   // = u*a + v*b + w*c, u = va * denom = 1.0f - v - w
   const Point closest_pt = vertices_.vertex_a + ab * v + ac * w;
+  *closest = closest_pt;
+  return;
+}
+
+float TriangleGeometer::getDistanceToPoint(const Point &point) const {
+  Point closest_pt;
+  getClosestPoint(point, &closest_pt);
   return (closest_pt - point).norm();
 }
 
-
 AABB TriangleGeometer::getAABB() const {
-  return AABB::fromPoints(vertices_.vertex_a,
-                          vertices_.vertex_b,
+  return AABB::fromPoints(vertices_.vertex_a, vertices_.vertex_b,
                           vertices_.vertex_c);
 }
 
-bool TriangleGeometer::getRayIntersection(const Point2D &ray_yz,
-                                          Point *barycentric_coordinates)
-                                          const {
+bool TriangleGeometer::getRayIntersection(
+    const Point2D &ray_yz, Point *barycentric_coordinates) const {
   CHECK_NOTNULL(barycentric_coordinates);
 
   // Express the vertices A, B and C relative to the point
@@ -94,8 +105,7 @@ bool TriangleGeometer::getRayIntersection(const Point2D &ray_yz,
   //       areas. After being normalized, these correspond to the barycentric
   //       coordinates (see the end of this method).
   const int sign_a =
-      getRelativeOrientation(vertex_b_relative,
-                             vertex_c_relative,
+      getRelativeOrientation(vertex_b_relative, vertex_c_relative,
                              &barycentric_coordinates->operator[](0));
   // If the relative orientation is zero, vertices B and C must be equal.
   // This would mean that the triangle has no surface area and the ray therefore
@@ -104,8 +114,7 @@ bool TriangleGeometer::getRayIntersection(const Point2D &ray_yz,
 
   // Check the orientation of C relative to A
   const int sign_b =
-      getRelativeOrientation(vertex_c_relative,
-                             vertex_a_relative,
+      getRelativeOrientation(vertex_c_relative, vertex_a_relative,
                              &barycentric_coordinates->operator[](1));
   // If the signs differ, the solution to the intersection equation does not lie
   // inside the triangle (i.e. the ray does not intersect the triangle)
@@ -113,8 +122,7 @@ bool TriangleGeometer::getRayIntersection(const Point2D &ray_yz,
 
   // Check the orientation of A relative to B
   const int sign_c =
-      getRelativeOrientation(vertex_a_relative,
-                             vertex_b_relative,
+      getRelativeOrientation(vertex_a_relative, vertex_b_relative,
                              &barycentric_coordinates->operator[](2));
   // If the signs differ, the solution to the intersection equation does not lie
   // inside the triangle (i.e. the ray does not intersect the triangle)

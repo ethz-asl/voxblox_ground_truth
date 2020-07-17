@@ -19,6 +19,7 @@ class SdfCreator {
   void integrateTriangle(
       const TriangularFaceVertexCoordinates &vertex_coordinates);
 
+
   const voxblox::TsdfMap &getTsdfMap();
   const voxblox::Layer<IntersectionVoxel> &getIntersectionLayer() {
     return intersection_layer_;
@@ -36,13 +37,18 @@ class SdfCreator {
   void floodfillUnoccupied(FloatingPoint distance_value,
                            bool dont_stop = false);
 
+  // This is the normal-based integration:
+  void integrateTriangleWithNormal(
+      const TriangularFaceVertexCoordinates &vertex_coordinates,
+      const voxblox::Point &normal);
+
   // For each triangle, floodfill any space in a half-sphere in front of it up
   // to distance, setting the value to distance_value.
   void clearSpaceInFrontOfTriangles(
       const std::vector<
           TriangularFaceVertexCoordinates,
           Eigen::aligned_allocator<TriangularFaceVertexCoordinates> >
-          &triangle_list,
+          &triangle_list, const voxblox::Pointcloud &normals,
       FloatingPoint distance, float distance_value);
 
  private:

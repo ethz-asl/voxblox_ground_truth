@@ -12,6 +12,8 @@ class TriangleGeometer {
 
   AABB getAABB() const;
 
+  void getClosestPoint(const Point &point, Point *closest) const;
+
   float getDistanceToPoint(const Point &point) const;
 
   bool getRayIntersection(const Point2D &ray_yz,

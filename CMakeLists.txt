@@ -38,10 +38,13 @@ target_link_libraries(${PROJECT_NAME} ${PROTO_LIBRARIES})
 ##############
 cs_add_executable(ply_to_sdf
     src/user_interfaces/ply_to_sdf_script.cpp
-    src/sdf_creator.cpp
-    src/sdf_visualizer.cpp
-    src/triangle_geometer.cpp)
+)
 target_link_libraries(ply_to_sdf ${PROJECT_NAME})
+
+cs_add_executable(ply_to_sdf_normals
+    src/user_interfaces/ply_to_sdf_normals.cpp
+)
+target_link_libraries(ply_to_sdf_normals ${PROJECT_NAME})
 
 #################
 # GAZEBO PLUGIN #
