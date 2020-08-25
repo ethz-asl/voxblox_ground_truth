@@ -72,22 +72,18 @@ bool VoxbloxGroundTruthPlugin::serviceCallback(
                 std::string mesh_base_name = geometry_msg.mesh().filename();
                 LOG(INFO) << "Attempting to load mesh " << mesh_base_name;
                 // extracting file name
-                size_t idx = mesh_base_name.find(".");
+                size_t idx = mesh_base_name.find('.');
                 mesh_base_name.erase(
                     mesh_base_name.begin() + idx, mesh_base_name.end());
-                std::string praefix = "file://";
-                size_t idx_praefix = mesh_base_name.find(praefix);
-                if (idx_praefix < mesh_base_name.size()
-                    && mesh_base_name.size() > praefix.size()) {
+                const std::string prefix = "file://";
+                size_t idx_prefix = mesh_base_name.find(prefix);
+                if (idx_prefix < mesh_base_name.size()
+                    && mesh_base_name.size() > prefix.size()) {
                   mesh_base_name.erase(mesh_base_name.begin(),
-                                       mesh_base_name.begin() + praefix.size());
+                                       mesh_base_name.begin() + prefix.size());
                 }
                 // try loading different mesh objects
-                std::vector<std::string> object_types;
-                object_types.emplace_back(".dae");
-                object_types.emplace_back(".obj");
-                object_types.emplace_back(".mtl");
-                for (const std::string& object_type : object_types) {
+                for (const std::string& object_type : mesh_file_extensions_) {
                   mesh_name = mesh_base_name + object_type;
                   mesh_ptr = mesh_manager->Load(mesh_name);
                   if (mesh_ptr) {
