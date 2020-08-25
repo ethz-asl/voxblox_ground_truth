@@ -27,8 +27,11 @@ class VoxbloxGroundTruthPlugin : public WorldPlugin {
   voxblox::FloatingPoint voxel_size_;
   ros::ServiceServer srv_;
 
-  std::vector<std::string> mesh_type_names_ = {
+  const std::vector<std::string> mesh_type_names_ = {
       "POINTS", "LINES", "LINESTRIPS", "TRIANGLES", "TRIFANS", "TRISTRIPS"};
+
+  const std::vector<std::string> mesh_file_extensions_ = {
+      ".dae", ".obj", ".mtl"};
 
   voxblox_ground_truth::SdfVisualizer sdf_visualizer_;
 };
