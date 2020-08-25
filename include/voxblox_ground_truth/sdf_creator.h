@@ -17,10 +17,10 @@ class SdfCreator {
   explicit SdfCreator(voxblox::TsdfMap::Config map_config);
 
   void integrateTriangle(
-      const TriangularFaceVertexCoordinates &vertex_coordinates);
+      const TriangularFaceVertexCoordinates& vertex_coordinates);
 
-  const voxblox::TsdfMap &getTsdfMap();
-  const voxblox::Layer<IntersectionVoxel> &getIntersectionLayer() {
+  const voxblox::TsdfMap& getTsdfMap();
+  const voxblox::Layer<IntersectionVoxel>& getIntersectionLayer() {
     return intersection_layer_;
   }
 
@@ -38,8 +38,8 @@ class SdfCreator {
  private:
   bool signs_up_to_date_;
   void updateSigns();
-  void getAABBIndices(GlobalIndex* global_voxel_index_min, GlobalIndex* global_voxel_index_max) const;
-
+  void getAABBIndices(GlobalIndex* global_voxel_index_min,
+                      GlobalIndex* global_voxel_index_max) const;
 
   voxblox::TsdfMap tsdf_map_;
   voxblox::Layer<IntersectionVoxel> intersection_layer_;

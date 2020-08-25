@@ -31,7 +31,7 @@ struct TriangularFaceVertexCoordinates {
 struct AABB {
   Point min = {INFINITY, INFINITY, INFINITY};
   Point max = {-INFINITY, -INFINITY, -INFINITY};
-  static AABB fromPoints(const Point &a, const Point &b, const Point &c) {
+  static AABB fromPoints(const Point& a, const Point& b, const Point& c) {
     AABB aabb;
     aabb.min = a.cwiseMin(b.cwiseMin(c));
     aabb.max = a.cwiseMax(b.cwiseMax(c));
@@ -39,8 +39,9 @@ struct AABB {
   }
 };
 
-inline bool visualizeIntersectionCount(
-    const IntersectionVoxel& voxel, const Point& /*coord*/, double* intensity) {
+inline bool visualizeIntersectionCount(const IntersectionVoxel& voxel,
+                                       const Point& /*coord*/,
+                                       double* intensity) {
   CHECK_NOTNULL(intensity);
   if (voxel.count > 0) {
     *intensity = voxel.count;

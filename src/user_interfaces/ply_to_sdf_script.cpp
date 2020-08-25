@@ -13,7 +13,7 @@
 #include <ros/ros.h>
 #include "voxblox_ground_truth/sdf_visualizer.h"
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
   using PointcloudMsg = pcl::PointCloud<pcl::PointXYZI>;
   /* Advertise the debugging ROS topic */
   // Register with ROS
@@ -86,7 +86,7 @@ int main(int argc, char *argv[]) {
   // Iterate over all triangles
   size_t triangle_i = 0;
   size_t num_triangles = mesh.polygons.size();
-  for (const pcl::Vertices &polygon : mesh.polygons) {
+  for (const pcl::Vertices& polygon : mesh.polygons) {
     // Ensure that the polygon is a triangle (other meshes are not supported)
     CHECK_EQ(polygon.vertices.size(), 3);
 

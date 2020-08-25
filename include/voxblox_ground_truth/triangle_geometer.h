@@ -12,17 +12,17 @@ class TriangleGeometer {
 
   AABB getAABB() const;
 
-  float getDistanceToPoint(const Point &point) const;
+  float getDistanceToPoint(const Point& point) const;
 
-  bool getRayIntersection(const Point2D &ray_yz,
-                          Point *barycentric_coordinates) const;
+  bool getRayIntersection(const Point2D& ray_yz,
+                          Point* barycentric_coordinates) const;
 
  private:
   const TriangularFaceVertexCoordinates vertices_;
 
-  int getRelativeOrientation(const Point2D &vertex_one,
-                             const Point2D &vertex_two,
-                             float *twice_signed_area) const;
+  int getRelativeOrientation(const Point2D& vertex_one,
+                             const Point2D& vertex_two,
+                             float* twice_signed_area) const;
 };
 }  // namespace voxblox_ground_truth
 
