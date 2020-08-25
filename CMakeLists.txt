@@ -7,21 +7,6 @@ add_definitions(-std=c++11)
 find_package(catkin_simple REQUIRED)
 catkin_simple(ALL_DEPS_REQUIRED)
 
-############
-# PROTOBUF #
-############
-# General idea: first check if we have protobuf catkin, then use that.
-# Otherwise use system protobuf.
-set(PROTO_LIBRARIES "")
-find_package(protobuf_catkin QUIET)
-if (protobuf_catkin_FOUND)
-  message(STATUS "Using protobuf_catkin")
-  set(PROTO_LIBRARIES ${protobuf_catkin_LIBRARIES})
-else()
-  message(STATUS "Using system protobuf")
-  find_package(Protobuf REQUIRED)
-  set(PROTO_LIBRARIES ${PROTOBUF_LIBRARIES})
-endif()
 
 #############
 # LIBRARIES #
@@ -31,7 +16,6 @@ cs_add_library(${PROJECT_NAME}
   src/triangle_geometer.cpp
   src/sdf_visualizer.cpp
 )
-target_link_libraries(${PROJECT_NAME} ${PROTO_LIBRARIES})
 
 ##############
 ## BINARIES ##
