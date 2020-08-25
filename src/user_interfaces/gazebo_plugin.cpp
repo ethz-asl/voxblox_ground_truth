@@ -1,5 +1,7 @@
 #include "voxblox_ground_truth/user_interfaces/gazebo_plugin.h"
+
 #include <string>
+
 #include "voxblox_ground_truth/sdf_creator.h"
 
 namespace gazebo {

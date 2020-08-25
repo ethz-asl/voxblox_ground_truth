@@ -3,6 +3,7 @@
 
 #include <ros/ros.h>
 #include <voxblox_ros/ptcloud_vis.h>
+
 #include "voxblox_ground_truth/common.h"
 
 namespace voxblox_ground_truth {

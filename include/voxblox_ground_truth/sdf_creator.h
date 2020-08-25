@@ -2,6 +2,7 @@
 #define VOXBLOX_GROUND_TRUTH_SDF_CREATOR_H_
 
 #include <voxblox/core/tsdf_map.h>
+
 #include "voxblox_ground_truth/common.h"
 
 namespace voxblox_ground_truth {

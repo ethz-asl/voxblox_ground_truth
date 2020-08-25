@@ -2,6 +2,7 @@
 #define VOXBLOX_GROUND_TRUTH_TRIANGLE_GEOMETER_H_
 
 #include <utility>
+
 #include "voxblox_ground_truth/common.h"
 
 namespace voxblox_ground_truth {

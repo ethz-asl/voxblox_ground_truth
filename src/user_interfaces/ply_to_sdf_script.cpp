@@ -1,4 +1,3 @@
-#include <pcl/io/ply_io.h>
 #include <cstring>
 #include <fstream>
 #include <iostream>
@@ -6,11 +5,15 @@
 #include <sstream>
 #include <string>
 #include <vector>
+
+#include <pcl/io/ply_io.h>
+
 #include "voxblox_ground_truth/common.h"
 #include "voxblox_ground_truth/sdf_creator.h"
 
 // For debugging only
 #include <ros/ros.h>
+
 #include "voxblox_ground_truth/sdf_visualizer.h"
 
 int main(int argc, char* argv[]) {

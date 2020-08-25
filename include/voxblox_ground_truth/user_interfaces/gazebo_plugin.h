@@ -1,14 +1,16 @@
 #ifndef VOXBLOX_GROUND_TRUTH_USER_INTERFACES_GAZEBO_PLUGIN_H_
 #define VOXBLOX_GROUND_TRUTH_USER_INTERFACES_GAZEBO_PLUGIN_H_
 
-#include <glog/logging.h>
-#include <ros/ros.h>
-#include <voxblox_msgs/FilePath.h>
+#include <string>
+#include <vector>
+
 #include <gazebo/gazebo.hh>
 #include <gazebo/physics/PhysicsTypes.hh>
 #include <gazebo/physics/physics.hh>
-#include <string>
-#include <vector>
+#include <glog/logging.h>
+#include <ros/ros.h>
+#include <voxblox_msgs/FilePath.h>
+
 #include "voxblox_ground_truth/sdf_visualizer.h"
 
 namespace gazebo {

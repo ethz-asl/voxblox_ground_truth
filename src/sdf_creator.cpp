@@ -1,8 +1,10 @@
-#include <ros/ros.h>
-#include <voxblox/utils/neighbor_tools.h>
+#include "voxblox_ground_truth/sdf_creator.h"
+
 #include <limits>
 
-#include "voxblox_ground_truth/sdf_creator.h"
+#include <ros/ros.h>
+#include <voxblox/utils/neighbor_tools.h>
+
 #include "voxblox_ground_truth/triangle_geometer.h"
 
 namespace voxblox_ground_truth {
