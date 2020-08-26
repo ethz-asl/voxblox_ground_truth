@@ -148,7 +148,12 @@ bool VoxbloxGroundTruthPlugin::serviceCallback(
                   geometry_size.Set(dimensions.x(), dimensions.y(), 1.0);
                 } else if (geometry_type_str == "mesh") {
                   // NOTE: The shape scale is absolute w.r.t. the world
-                  geometry_size = collision->GetShape()->Scale();
+                  if(collision->GetShape()->GetSDF()->HasElement("scale")) {
+                    collision->GetShape()->GetSDF()->GetElement("scale")
+                            ->GetValue()->Get(geometry_size);
+                  } else {
+                    geometry_size = collision->GetShape()->Scale();
+                  }
                   LOG(INFO) << "Scale: shape_scale " << geometry_size;
                 } else {
                   LOG(ERROR) << "Could not get geometry size of "  << geometry_type_str;
