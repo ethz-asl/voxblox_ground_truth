@@ -1,8 +1,10 @@
-#include <ros/ros.h>
-#include <voxblox/utils/neighbor_tools.h>
+#include "voxblox_ground_truth/sdf_creator.h"
+
 #include <limits>
 
-#include "voxblox_ground_truth/sdf_creator.h"
+#include <ros/ros.h>
+#include <voxblox/utils/neighbor_tools.h>
+
 #include "voxblox_ground_truth/triangle_geometer.h"
 
 namespace voxblox_ground_truth {
@@ -20,7 +22,7 @@ SdfCreator::SdfCreator(voxblox::TsdfMap::Config map_config)
       fill_inside_(true) {}
 
 void SdfCreator::integrateTriangle(
-    const TriangularFaceVertexCoordinates &vertex_coordinates) {
+    const TriangularFaceVertexCoordinates& vertex_coordinates) {
   // Indicate that the computed signs are no longer valid
   signs_up_to_date_ = false;
 
@@ -59,7 +61,7 @@ void SdfCreator::integrateTriangle(
         // Allocate the block and get the voxel
         voxblox::Block<voxblox::TsdfVoxel>::Ptr block_ptr =
             tsdf_map_.getTsdfLayerPtr()->allocateBlockPtrByIndex(block_index);
-        voxblox::TsdfVoxel &voxel =
+        voxblox::TsdfVoxel& voxel =
             block_ptr->getVoxelByVoxelIndex(local_voxel_index);
 
         // Compute distance to triangle
@@ -104,7 +106,7 @@ void SdfCreator::integrateTriangle(
         // Allocate the block and get the voxel
         voxblox::Block<IntersectionVoxel>::Ptr block_ptr =
             intersection_layer_.allocateBlockPtrByIndex(block_index);
-        IntersectionVoxel &intersection_voxel =
+        IntersectionVoxel& intersection_voxel =
             block_ptr->getVoxelByVoxelIndex(local_voxel_index);
 
         // Increase the count of intersections for this grid cell
@@ -114,8 +116,8 @@ void SdfCreator::integrateTriangle(
   }
 }
 
-void SdfCreator::getAABBIndices(GlobalIndex *global_voxel_index_min,
-                                GlobalIndex *global_voxel_index_max) const {
+void SdfCreator::getAABBIndices(GlobalIndex* global_voxel_index_min,
+                                GlobalIndex* global_voxel_index_max) const {
   *global_voxel_index_min =
       GlobalIndex::Constant(std::numeric_limits<LongIndexElement>::max());
   *global_voxel_index_max =
@@ -129,7 +131,7 @@ void SdfCreator::getAABBIndices(GlobalIndex *global_voxel_index_min,
   // Iterate over all allocated blocks in the map
   voxblox::BlockIndexList tsdf_block_list;
   tsdf_map_.getTsdfLayer().getAllAllocatedBlocks(&tsdf_block_list);
-  for (const voxblox::BlockIndex &block_index : tsdf_block_list) {
+  for (const voxblox::BlockIndex& block_index : tsdf_block_list) {
     const GlobalIndex global_voxel_index_in_block_min =
         voxblox::getGlobalVoxelIndexFromBlockAndVoxelIndex(
             block_index, local_voxel_index_min, voxels_per_side_);
@@ -165,7 +167,7 @@ void SdfCreator::updateSigns() {
 
         GlobalIndex global_voxel_index(x, y, z);
 
-        IntersectionVoxel *intersection_voxel =
+        IntersectionVoxel* intersection_voxel =
             intersection_layer_.getVoxelPtrByGlobalIndex(global_voxel_index);
 
         if (intersection_voxel) {
@@ -174,7 +176,7 @@ void SdfCreator::updateSigns() {
 
         if (intersection_count % 2 == fill_inside_) {
           // We're inside the surface
-          voxblox::TsdfVoxel *tsdf_voxel =
+          voxblox::TsdfVoxel* tsdf_voxel =
               tsdf_map_.getTsdfLayerPtr()->getVoxelPtrByGlobalIndex(
                   global_voxel_index);
           if (tsdf_voxel) {
@@ -190,7 +192,7 @@ void SdfCreator::updateSigns() {
   LOG(INFO) << "Computing signs completed.";
 }
 
-const voxblox::TsdfMap &SdfCreator::getTsdfMap() {
+const voxblox::TsdfMap& SdfCreator::getTsdfMap() {
   // Compute the signs, unless they're already up to date
   if (!signs_up_to_date_) {
     updateSigns();
@@ -221,7 +223,7 @@ void SdfCreator::floodfillUnoccupied(FloatingPoint distance_value) {
         }
 
         GlobalIndex global_voxel_index(x, y, z);
-        voxblox::TsdfVoxel *tsdf_voxel =
+        voxblox::TsdfVoxel* tsdf_voxel =
             tsdf_map_.getTsdfLayerPtr()->getVoxelPtrByGlobalIndex(
                 global_voxel_index);
         // If the block doesn't exist, make it.
@@ -240,8 +242,8 @@ void SdfCreator::floodfillUnoccupied(FloatingPoint distance_value) {
           voxblox::Neighborhood<>::getFromGlobalIndex(global_voxel_index,
                                                       &neighbor_indices);
           for (unsigned int idx = 0u; idx < neighbor_indices.cols(); ++idx) {
-            const GlobalIndex &neighbor_index = neighbor_indices.col(idx);
-            voxblox::TsdfVoxel *neighbor_voxel =
+            const GlobalIndex& neighbor_index = neighbor_indices.col(idx);
+            voxblox::TsdfVoxel* neighbor_voxel =
                 tsdf_map_.getTsdfLayerPtr()->getVoxelPtrByGlobalIndex(
                     neighbor_index);
             // One free neighbor is enough to mark this voxel as free.

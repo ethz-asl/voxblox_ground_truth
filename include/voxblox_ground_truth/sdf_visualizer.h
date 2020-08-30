@@ -3,18 +3,18 @@
 
 #include <ros/ros.h>
 #include <voxblox_ros/ptcloud_vis.h>
+
 #include "voxblox_ground_truth/common.h"
 
 namespace voxblox_ground_truth {
 class SdfVisualizer {
  public:
-  explicit SdfVisualizer(ros::NodeHandle *nh_private);
+  explicit SdfVisualizer(ros::NodeHandle* nh_private);
 
   void publishIntersectionVisuals(
-      const voxblox::Layer<IntersectionVoxel> &intersection_layer);
+      const voxblox::Layer<IntersectionVoxel>& intersection_layer);
 
-  void publishTsdfVisuals(
-      const voxblox::Layer<voxblox::TsdfVoxel> &tsdf_layer);
+  void publishTsdfVisuals(const voxblox::Layer<voxblox::TsdfVoxel>& tsdf_layer);
 
  private:
   ros::Publisher tsdf_map_pub_;

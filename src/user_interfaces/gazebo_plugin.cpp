@@ -1,13 +1,14 @@
 #include "voxblox_ground_truth/user_interfaces/gazebo_plugin.h"
+
 #include <string>
+
 #include "voxblox_ground_truth/sdf_creator.h"
 
 namespace gazebo {
 GZ_REGISTER_WORLD_PLUGIN(VoxbloxGroundTruthPlugin)
 
 VoxbloxGroundTruthPlugin::VoxbloxGroundTruthPlugin()
-    : WorldPlugin(), nh_private_("~"), sdf_visualizer_(&nh_private_) {
-}
+    : WorldPlugin(), nh_private_("~"), sdf_visualizer_(&nh_private_) {}
 
 void VoxbloxGroundTruthPlugin::Load(physics::WorldPtr world,
                                     sdf::ElementPtr _sdf) {
@@ -21,14 +22,14 @@ void VoxbloxGroundTruthPlugin::Load(physics::WorldPtr world,
 }
 
 bool VoxbloxGroundTruthPlugin::serviceCallback(
-    voxblox_msgs::FilePath::Request &request,
-    voxblox_msgs::FilePath::Response &response) {
+    voxblox_msgs::FilePath::Request& request,
+    voxblox_msgs::FilePath::Response& response) {
   // Read the voxel size from ROS params
   CHECK(nh_private_.getParam("/voxblox_ground_truth/voxel_size", voxel_size_))
       << "ROS param /voxblox_ground_truth/voxel_size must be set.";
 
   // Instantiate a Gazebo mesh manager
-  common::MeshManager *mesh_manager = common::MeshManager::Instance();
+  common::MeshManager* mesh_manager = common::MeshManager::Instance();
   CHECK_NOTNULL(mesh_manager);
 
   // Instantiate the ground truth SDF creator
@@ -37,13 +38,13 @@ bool VoxbloxGroundTruthPlugin::serviceCallback(
   voxblox_ground_truth::SdfCreator sdf_creator(map_config);
 
   // Iterate over all collision geometries
-# if GAZEBO_MAJOR_VERSION > 8
-  for (const physics::ModelPtr &model : world_->Models()) {
-# else
-  for (const physics::ModelPtr &model : world_->GetModels()) {
+#if GAZEBO_MAJOR_VERSION > 8
+  for (const physics::ModelPtr& model : world_->Models()) {
+#else
+  for (const physics::ModelPtr& model : world_->GetModels()) {
 #endif
-    for (const physics::LinkPtr &link : model->GetLinks()) {
-      for (const physics::CollisionPtr &collision : link->GetCollisions()) {
+    for (const physics::LinkPtr& link : model->GetLinks()) {
+      for (const physics::CollisionPtr& collision : link->GetCollisions()) {
         LOG(INFO) << "Processing '" << collision->GetScopedName(true) << "'";
 
         // Convert the geometry shape to a proto message
@@ -63,7 +64,6 @@ bool VoxbloxGroundTruthPlugin::serviceCallback(
           if (geometry_type_str == "box" || geometry_type_str == "cylinder" ||
               geometry_type_str == "sphere" || geometry_type_str == "plane" ||
               geometry_type_str == "mesh") {
-
             if (mesh_manager) {
               const common::Mesh* mesh_ptr;
               std::string mesh_name;
@@ -73,12 +73,12 @@ bool VoxbloxGroundTruthPlugin::serviceCallback(
                 LOG(INFO) << "Attempting to load mesh " << mesh_base_name;
                 // extracting file name
                 size_t idx = mesh_base_name.find('.');
-                mesh_base_name.erase(
-                    mesh_base_name.begin() + idx, mesh_base_name.end());
+                mesh_base_name.erase(mesh_base_name.begin() + idx,
+                                     mesh_base_name.end());
                 const std::string prefix = "file://";
                 size_t idx_prefix = mesh_base_name.find(prefix);
-                if (idx_prefix < mesh_base_name.size()
-                    && mesh_base_name.size() > prefix.size()) {
+                if (idx_prefix < mesh_base_name.size() &&
+                    mesh_base_name.size() > prefix.size()) {
                   mesh_base_name.erase(mesh_base_name.begin(),
                                        mesh_base_name.begin() + prefix.size());
                 }
@@ -87,12 +87,12 @@ bool VoxbloxGroundTruthPlugin::serviceCallback(
                   mesh_name = mesh_base_name + object_type;
                   mesh_ptr = mesh_manager->Load(mesh_name);
                   if (mesh_ptr) {
-                    LOG(INFO) << "- Loading file \"" << mesh_name
-                              << "\" successful.";
+                    LOG(INFO)
+                        << "- Loading file \"" << mesh_name << "\" successful.";
                     break;
                   } else {
-                    LOG(INFO) << "- Loading mesh \"" << mesh_name
-                              << "\" failed.";
+                    LOG(INFO)
+                        << "- Loading mesh \"" << mesh_name << "\" failed.";
                   }
                 }
                 if (!mesh_ptr) {
@@ -106,8 +106,8 @@ bool VoxbloxGroundTruthPlugin::serviceCallback(
               }
 
               if (!mesh_ptr) {
-                LOG(WARNING) << "Could not get pointer to mesh '" << mesh_name
-                             << "'";
+                LOG(WARNING)
+                    << "Could not get pointer to mesh '" << mesh_name << "'";
                 return false;
               }
 
@@ -151,18 +151,18 @@ bool VoxbloxGroundTruthPlugin::serviceCallback(
                   geometry_size = collision->GetShape()->Scale();
                   LOG(INFO) << "Scale: shape_scale " << geometry_size;
                 } else {
-                  LOG(ERROR) << "Could not get geometry size of "  << geometry_type_str;
+                  LOG(ERROR)
+                      << "Could not get geometry size of " << geometry_type_str;
                   continue;
                 }
 
                 // Scale the mesh and transform it into world frame
-# if GAZEBO_MAJOR_VERSION > 8
-                const ignition::math::Pose3d transform =
-                    collision->WorldPose();
-# else
+#if GAZEBO_MAJOR_VERSION > 8
+                const ignition::math::Pose3d transform = collision->WorldPose();
+#else
                 const ignition::math::Pose3d transform =
                     collision->GetWorldPose().Ign();
-# endif
+#endif
                 for (unsigned int vertex_i = 0;
                      vertex_i < submesh.GetVertexCount(); vertex_i++) {
                   // Create a copy of the vertex s.t. it can be manipulated
@@ -235,13 +235,12 @@ bool VoxbloxGroundTruthPlugin::serviceCallback(
   // Optionally floodfill unoccupied space.
   bool floodfill_unoccupied = false;
   nh_private_.param("floodfill_unoccupied", floodfill_unoccupied,
-                   floodfill_unoccupied);
+                    floodfill_unoccupied);
   if (floodfill_unoccupied) {
     LOG(INFO) << "Floodfill unoccupied space.";
 
     double distance = 4 * voxel_size_;
-    nh_private_.param("floodfill_distance", distance,
-                      distance);
+    nh_private_.param("floodfill_distance", distance, distance);
     LOG(INFO) << "Floodfill distance: " << distance;
     sdf_creator.floodfillUnoccupied(distance);
   }
@@ -251,8 +250,7 @@ bool VoxbloxGroundTruthPlugin::serviceCallback(
   nh_private_.param("publish_visuals", publish_debug_visuals,
                     publish_debug_visuals);
   if (publish_debug_visuals) {
-    sdf_visualizer_.publishTsdfVisuals(
-        sdf_creator.getTsdfMap().getTsdfLayer());
+    sdf_visualizer_.publishTsdfVisuals(sdf_creator.getTsdfMap().getTsdfLayer());
     sdf_visualizer_.publishIntersectionVisuals(
         sdf_creator.getIntersectionLayer());
   }

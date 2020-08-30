@@ -3,7 +3,7 @@
 namespace voxblox_ground_truth {
 // This function is heavily based on the example on page 141 of:
 // "Real-time collision detection" by Christer Ericson
-float TriangleGeometer::getDistanceToPoint(const Point &point) const {
+float TriangleGeometer::getDistanceToPoint(const Point& point) const {
   using Vector = Point;
 
   // Check if the point is in the region outside A
@@ -58,8 +58,8 @@ float TriangleGeometer::getDistanceToPoint(const Point &point) const {
   if (va <= 0.0f && (d4 - d3) >= 0.0f && (d5 - d6) >= 0.0f) {
     const float w = (d4 - d3) / ((d4 - d3) + (d5 - d6));
     // The barycentric coordinates are (0,1-w,w)
-    const Point closest_pt = vertices_.vertex_b
-                           + w * (vertices_.vertex_c - vertices_.vertex_b);
+    const Point closest_pt =
+        vertices_.vertex_b + w * (vertices_.vertex_c - vertices_.vertex_b);
     return (closest_pt - point).norm();
   }
 
@@ -72,16 +72,13 @@ float TriangleGeometer::getDistanceToPoint(const Point &point) const {
   return (closest_pt - point).norm();
 }
 
-
 AABB TriangleGeometer::getAABB() const {
-  return AABB::fromPoints(vertices_.vertex_a,
-                          vertices_.vertex_b,
+  return AABB::fromPoints(vertices_.vertex_a, vertices_.vertex_b,
                           vertices_.vertex_c);
 }
 
-bool TriangleGeometer::getRayIntersection(const Point2D &ray_yz,
-                                          Point *barycentric_coordinates)
-                                          const {
+bool TriangleGeometer::getRayIntersection(
+    const Point2D& ray_yz, Point* barycentric_coordinates) const {
   CHECK_NOTNULL(barycentric_coordinates);
 
   // Express the vertices A, B and C relative to the point
@@ -94,8 +91,7 @@ bool TriangleGeometer::getRayIntersection(const Point2D &ray_yz,
   //       areas. After being normalized, these correspond to the barycentric
   //       coordinates (see the end of this method).
   const int sign_a =
-      getRelativeOrientation(vertex_b_relative,
-                             vertex_c_relative,
+      getRelativeOrientation(vertex_b_relative, vertex_c_relative,
                              &barycentric_coordinates->operator[](0));
   // If the relative orientation is zero, vertices B and C must be equal.
   // This would mean that the triangle has no surface area and the ray therefore
@@ -104,8 +100,7 @@ bool TriangleGeometer::getRayIntersection(const Point2D &ray_yz,
 
   // Check the orientation of C relative to A
   const int sign_b =
-      getRelativeOrientation(vertex_c_relative,
-                             vertex_a_relative,
+      getRelativeOrientation(vertex_c_relative, vertex_a_relative,
                              &barycentric_coordinates->operator[](1));
   // If the signs differ, the solution to the intersection equation does not lie
   // inside the triangle (i.e. the ray does not intersect the triangle)
@@ -113,8 +108,7 @@ bool TriangleGeometer::getRayIntersection(const Point2D &ray_yz,
 
   // Check the orientation of A relative to B
   const int sign_c =
-      getRelativeOrientation(vertex_a_relative,
-                             vertex_b_relative,
+      getRelativeOrientation(vertex_a_relative, vertex_b_relative,
                              &barycentric_coordinates->operator[](2));
   // If the signs differ, the solution to the intersection equation does not lie
   // inside the triangle (i.e. the ray does not intersect the triangle)
@@ -133,9 +127,9 @@ bool TriangleGeometer::getRayIntersection(const Point2D &ray_yz,
   return true;
 }
 
-int TriangleGeometer::getRelativeOrientation(const Point2D &vertex_one,
-                                             const Point2D &vertex_two,
-                                             float *twice_signed_area) const {
+int TriangleGeometer::getRelativeOrientation(const Point2D& vertex_one,
+                                             const Point2D& vertex_two,
+                                             float* twice_signed_area) const {
   CHECK_NOTNULL(twice_signed_area);
 
   // Compute the signed area (scaled by factor 2, but we don't care)

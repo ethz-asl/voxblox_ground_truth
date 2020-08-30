@@ -1,11 +1,13 @@
 #include "voxblox_ground_truth/sdf_visualizer.h"
 
 namespace voxblox_ground_truth {
-SdfVisualizer::SdfVisualizer(ros::NodeHandle *nh_private) : tsdf_slice_height_(0.0) {
+SdfVisualizer::SdfVisualizer(ros::NodeHandle* nh_private)
+    : tsdf_slice_height_(0.0) {
   CHECK_NOTNULL(nh_private);
 
   // Get parameters.
-  nh_private->param("tsdf_slice_height", tsdf_slice_height_, tsdf_slice_height_);
+  nh_private->param("tsdf_slice_height", tsdf_slice_height_,
+                    tsdf_slice_height_);
 
   // Advertise the topics to visualize the SDF map in Rviz
   tsdf_map_pub_ = nh_private->advertise<pcl::PointCloud<pcl::PointXYZI>>(
@@ -21,7 +23,7 @@ SdfVisualizer::SdfVisualizer(ros::NodeHandle *nh_private) : tsdf_slice_height_(0
 }
 
 void voxblox_ground_truth::SdfVisualizer::publishIntersectionVisuals(
-    const voxblox::Layer<IntersectionVoxel> &intersection_layer) {
+    const voxblox::Layer<IntersectionVoxel>& intersection_layer) {
   LOG(INFO) << "Publishing intersection counts";
   pcl::PointCloud<pcl::PointXYZI> intersection_count_msg;
   intersection_count_msg.header.frame_id = "world";
@@ -31,7 +33,7 @@ void voxblox_ground_truth::SdfVisualizer::publishIntersectionVisuals(
 }
 
 void voxblox_ground_truth::SdfVisualizer::publishTsdfVisuals(
-    const voxblox::Layer<voxblox::TsdfVoxel> &tsdf_layer) {
+    const voxblox::Layer<voxblox::TsdfVoxel>& tsdf_layer) {
   LOG(INFO) << "Publishing TSDF";
   pcl::PointCloud<pcl::PointXYZI> tsdf_map_ptcloud_msg;
   tsdf_map_ptcloud_msg.header.frame_id = "world";
@@ -49,9 +51,8 @@ void voxblox_ground_truth::SdfVisualizer::publishTsdfVisuals(
   LOG(INFO) << "Publishing TSDF slice";
   pcl::PointCloud<pcl::PointXYZI> tsdf_slice_ptcloud_msg;
   tsdf_slice_ptcloud_msg.header.frame_id = "world";
-  voxblox::createDistancePointcloudFromTsdfLayerSlice(tsdf_layer,
-                                                      2, tsdf_slice_height_,
-                                                      &tsdf_slice_ptcloud_msg);
+  voxblox::createDistancePointcloudFromTsdfLayerSlice(
+      tsdf_layer, 2, tsdf_slice_height_, &tsdf_slice_ptcloud_msg);
   tsdf_slice_pub_.publish(tsdf_slice_ptcloud_msg);
 }
 }  // namespace voxblox_ground_truth

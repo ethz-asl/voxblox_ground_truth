@@ -1,14 +1,16 @@
 #ifndef VOXBLOX_GROUND_TRUTH_USER_INTERFACES_GAZEBO_PLUGIN_H_
 #define VOXBLOX_GROUND_TRUTH_USER_INTERFACES_GAZEBO_PLUGIN_H_
 
-#include <glog/logging.h>
-#include <ros/ros.h>
-#include <voxblox_msgs/FilePath.h>
+#include <string>
+#include <vector>
+
 #include <gazebo/gazebo.hh>
 #include <gazebo/physics/PhysicsTypes.hh>
 #include <gazebo/physics/physics.hh>
-#include <string>
-#include <vector>
+#include <glog/logging.h>
+#include <ros/ros.h>
+#include <voxblox_msgs/FilePath.h>
+
 #include "voxblox_ground_truth/sdf_visualizer.h"
 
 namespace gazebo {
@@ -18,8 +20,8 @@ class VoxbloxGroundTruthPlugin : public WorldPlugin {
 
   void Load(physics::WorldPtr world, sdf::ElementPtr _sdf) override;
 
-  bool serviceCallback(voxblox_msgs::FilePath::Request &request,     // NOLINT
-                       voxblox_msgs::FilePath::Response &response);  // NOLINT
+  bool serviceCallback(voxblox_msgs::FilePath::Request& request,     // NOLINT
+                       voxblox_msgs::FilePath::Response& response);  // NOLINT
 
  private:
   physics::WorldPtr world_;
@@ -30,8 +32,8 @@ class VoxbloxGroundTruthPlugin : public WorldPlugin {
   const std::vector<std::string> mesh_type_names_ = {
       "POINTS", "LINES", "LINESTRIPS", "TRIANGLES", "TRIFANS", "TRISTRIPS"};
 
-  const std::vector<std::string> mesh_file_extensions_ = {
-      ".dae", ".obj", ".mtl"};
+  const std::vector<std::string> mesh_file_extensions_ = {".dae", ".obj",
+                                                          ".mtl"};
 
   voxblox_ground_truth::SdfVisualizer sdf_visualizer_;
 };
