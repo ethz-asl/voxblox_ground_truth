@@ -66,7 +66,7 @@ void SdfCreator::integrateTriangle(
 
         // Compute distance to triangle
         voxel_origin =
-            voxblox::getOriginPointFromGridIndex(voxel_index, voxel_size_);
+            voxblox::getCenterPointFromGridIndex(voxel_index, voxel_size_);
         float distance = triangle_geometer.getDistanceToPoint(voxel_origin);
 
         // Update voxel if new distance is lower or if it is new
