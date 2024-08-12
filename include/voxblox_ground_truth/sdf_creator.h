@@ -53,7 +53,7 @@ class SdfCreator {
   // Whether to fill the *inside* of the object (think of Stanford Bunny) or
   // *outside* of the object (think of watertight mesh of the inside of an
   // office). For Gazebo inputs should be set to TRUE.
-  bool fill_inside_;
+  bool fill_inside_ = false;
   const unsigned int aabb_padding_ = 1;
 };
 }  // namespace voxblox_ground_truth

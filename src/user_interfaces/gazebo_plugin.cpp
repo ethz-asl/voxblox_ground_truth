@@ -238,7 +238,7 @@ bool VoxbloxGroundTruthPlugin::serviceCallback(
   }
 
   // Optionally floodfill unoccupied space.
-  bool floodfill_unoccupied = false;
+  bool floodfill_unoccupied = true;
   nh_private_.param("floodfill_unoccupied", floodfill_unoccupied,
                     floodfill_unoccupied);
   if (floodfill_unoccupied) {
